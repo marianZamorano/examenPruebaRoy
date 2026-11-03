@@ -2,7 +2,7 @@
 
 > Archivo generado automáticamente por `npm run test:evidencias`. No editar a mano.
 
-**Fecha de ejecución:** martes, 3 de noviembre de 2026, 3:27 a. m.
+**Fecha de ejecución:** martes, 3 de noviembre de 2026, 4:37 a. m.
 
 Cada carpeta contiene la captura con DevTools de cada paso (`pasos/`), el video del escenario
 (`video.webm`) y el resultado (`resultado.json`). Si el escenario tiene varios ejemplos
@@ -14,6 +14,7 @@ anteriores está en el reporte de Allure (`npm run report`, gráficos *Trend* y 
 | BUG-001 | Tras cerrar sesión, volver atrás no muestra datos del usuario | Reproducido | 9 | [captura del fallo](BUG-001/pasos/09_FALLO_deberia_permanecer_en_la_pagina_de_login.jpg) | [video](BUG-001/video.webm) |
 | BUG-002 | Un usuario bloqueado durante su sesión debería perder el acceso | Reproducido | 7 | [captura del fallo](BUG-002/pasos/07_FALLO_deberia_permanecer_en_la_pagina_de_login.jpg) | [video](BUG-002/video.webm) |
 | BUG-003 | Cerrar sesión en una pestaña cierra la sesión en las demás | Reproducido | 10 | [captura del fallo](BUG-003/pasos/10_FALLO_deberia_permanecer_en_la_pagina_de_login.jpg) | [video](BUG-003/video.webm) |
+| BUG-004 | Un usuario bloqueado no puede reservar fuera del formulario | Reproducido | 4 | [captura del fallo](BUG-004/pasos/04_FALLO_la_aplicacion_deberia_rechazar_la_reserva.jpg) | [video](BUG-004/video.webm) |
 | DEF-003 | Las contraseñas no se guardan legibles en el navegador | Reproducido | 3 | [captura del fallo](DEF-003/pasos/03_FALLO_el_almacenamiento_del_navegador_no_deberia_contener_la_contr.jpg) | [video](DEF-003/video.webm) |
 | DEF-004 | No se puede suplantar una sesión editando el almacenamiento | Reproducido | 5 | [captura del fallo](DEF-004/pasos/05_FALLO_deberia_permanecer_en_la_pagina_de_login.jpg) | [video](DEF-004/video.webm) |
 | DEF-005 | La cuenta se protege tras varios intentos fallidos | Reproducido | 4 | [captura del fallo](DEF-005/pasos/04_FALLO_deberia_permanecer_en_la_pagina_de_login.jpg) | [video](DEF-005/video.webm) |
@@ -27,3 +28,5 @@ anteriores está en el reporte de Allure (`npm run report`, gráficos *Trend* y 
 | DEF-013 | Un usuario que no puede reservar es avisado al abrir el formulario (rmamani) | Reproducido | 4 | [captura del fallo](DEF-013/rmamani/pasos/04_FALLO_deberia_ver_el_error_de_la_reserva_Alcanzo_el_limite_de_2_re.jpg) | [video](DEF-013/rmamani/video.webm) |
 | DEF-013 | Un usuario que no puede reservar es avisado al abrir el formulario (sflores) | Reproducido | 4 | [captura del fallo](DEF-013/sflores/pasos/04_FALLO_deberia_ver_el_error_de_la_reserva_Tiene_una_reserva_no_pres.jpg) | [video](DEF-013/sflores/video.webm) |
 | DEF-014 | El nombre del titular no acepta números | Reproducido | 8 | [captura del fallo](DEF-014/pasos/08_FALLO_deberia_ver_un_error_en_el_campo_Titular.jpg) | [video](DEF-014/video.webm) |
+| DEF-015 | Volver del detalle conserva las fechas buscadas (Atrás del navegador) | Reproducido | 5 | [captura del fallo](DEF-015/Atras_del_navegador/pasos/05_FALLO_las_fechas_buscadas_deberian_conservarse.jpg) | [video](DEF-015/Atras_del_navegador/video.webm) |
+| DEF-015 | Volver del detalle conserva las fechas buscadas (Volver a habitaciones) | Reproducido | 5 | [captura del fallo](DEF-015/Volver_a_habitaciones/pasos/05_FALLO_las_fechas_buscadas_deberian_conservarse.jpg) | [video](DEF-015/Volver_a_habitaciones/video.webm) |
