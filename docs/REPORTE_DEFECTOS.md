@@ -72,6 +72,7 @@ guarda en `allure-history/`, y en el historial de git.
 | [BUG-001](#bug-001) | Tras cerrar sesión, "atrás" permite ver y operar las reservas | Bug · Seguridad | Alta | Alta |
 | [BUG-002](#bug-002) | Un usuario bloqueado con sesión activa conserva el acceso | Bug · Seguridad | Alta | Alta |
 | [BUG-003](#bug-003) | Cerrar sesión en una pestaña no la cierra en las demás | Bug · Seguridad | Alta | Alta |
+| [BUG-004](#bug-004) | Un usuario bloqueado puede seguir creando reservas | Bug · Seguridad | Alta | Alta |
 | [DEF-003](#def-003) | Contraseñas almacenadas en texto plano en el navegador | Defecto de diseño · Seguridad | Crítica | Media |
 | [DEF-004](#def-004) | La sesión puede suplantarse editando el almacenamiento | Defecto de diseño · Seguridad | Crítica | Media |
 | [DEF-005](#def-005) | Sin límite de intentos fallidos de inicio de sesión | Defecto de diseño · Seguridad | Media | Media |
@@ -81,11 +82,12 @@ guarda en `allure-history/`, y en el historial de git.
 | [DEF-008](#def-008) | Después del login no se vuelve a la página solicitada | Defecto de diseño · Usabilidad | Baja | Baja |
 | [DEF-010](#def-010) | El formulario no marca de forma accesible los errores | Defecto de diseño · Accesibilidad | Baja | Baja |
 | [DEF-013](#def-013) | Quien no puede reservar se entera recién al confirmar | Defecto de diseño · Usabilidad | Baja | Media |
+| [DEF-015](#def-015) | Al volver del detalle se pierden las fechas buscadas | Defecto de diseño · Usabilidad | Baja | Media |
 | [DEF-014](#def-014) | El nombre del titular acepta números | Bug · Validación de datos | Baja | Baja |
 | [DEF-011](#def-011) | El foco no pasa al formulario de reserva al abrirlo | Defecto de diseño · Accesibilidad | Baja | Baja |
 | [DEF-012](#def-012) | El formulario de reserva no marca de forma accesible los errores | Defecto de diseño · Accesibilidad | Baja | Baja |
 
-BUG-001 a BUG-003 y DEF-003 a DEF-010 corresponden al inciso 1 (login); DEF-011 a DEF-014, al inciso 2 (reserva).
+BUG-001 a BUG-003 y DEF-003 a DEF-010 corresponden al inciso 1 (login); BUG-004 y DEF-011 a DEF-015, al inciso 2 (reserva).
 
 La evidencia de la última ejecución (captura de cada paso con DevTools, video y resultado de cada defecto) está en [`evidencias/`](evidencias/README.md), con un índice generado automáticamente.
 
@@ -162,6 +164,33 @@ La evidencia de la última ejecución (captura de cada paso con DevTools, video 
 **Análisis:** la aplicación no escucha cambios del almacenamiento (evento `storage`) ni vuelve a validar la sesión al navegar. Es la misma causa raíz de [BUG-001](#bug-001), pero no depende del caché del navegador.
 
 **Evidencia:** [capturas de cada paso con DevTools y video](evidencias/BUG-003/)
+
+---
+
+## BUG-004
+
+**Un usuario bloqueado puede seguir creando reservas**
+
+| Severidad | Prioridad | Escenarios |
+|---|---|---|
+| Alta | Alta | *Un usuario bloqueado no puede reservar fuera del formulario* |
+
+**Pasos**
+1. Iniciar sesión con `dchoque`.
+2. Bloquear al usuario. Igual que en [BUG-002](#bug-002), la prueba cambia su estado a `"bloqueado"` en el almacenamiento, como está guardado `ptorrez`.
+3. Solicitar a la lógica de la aplicación (`window.__hotelApi.createReservation`) una reserva de `H105` por 6 noches, con check-in dentro de 30 días.
+
+**Resultado esperado:** la reserva se rechaza porque el usuario está bloqueado.
+
+**Resultado obtenido:** `ok: true`. La reserva queda guardada como "Confirmada" en Mis reservas y sus fechas pasan a estar ocupadas para los demás huéspedes. En la exploración también se confirmó desde el formulario (*"Reserva R0008 confirmada."*) con `lvargas` y `dchoque`, después de recargar la página.
+
+**Análisis:** la creación de la reserva valida noches, fechas, capacidad, solapamiento, límite de reservas y no-show, pero **no el estado del usuario**.
+
+**Por qué no duplica [BUG-002](#bug-002):** BUG-002 es que el usuario bloqueado conserva la sesión. Este defecto es que la **reserva** no valida el estado del usuario. Por eso se prueba directamente contra la lógica de la reserva y no desde la interfaz: desde la interfaz, el escenario dependería de BUG-002 y pasaría en cuanto se corrija la sesión, aunque la reserva siga sin validar el estado. Corregir BUG-002 no corrige este defecto.
+
+**Impacto:** un usuario que recepción bloqueó puede ocupar habitaciones (hasta 6 si es Corporativo), y esas fechas dejan de estar disponibles para otros huéspedes.
+
+**Evidencia:** [capturas de cada paso con DevTools y video](evidencias/BUG-004/)
 
 ---
 
@@ -399,6 +428,28 @@ La evidencia de la última ejecución (captura de cada paso con DevTools, video 
 
 ---
 
+## DEF-015
+
+**Al volver del detalle se pierden las fechas buscadas**
+
+| Severidad | Prioridad | Escenario |
+|---|---|---|
+| Baja | Media | *Volver del detalle conserva las fechas buscadas* (con "Volver a habitaciones" y con Atrás del navegador) |
+
+**Pasos:** en Habitaciones, buscar fechas (check-in dentro de 30 días, 6 noches), abrir el detalle de `H105` y volver al listado con "← Volver a habitaciones" o con Atrás del navegador.
+
+**Resultado esperado:** el listado conserva las fechas buscadas y su disponibilidad, para poder comparar habitaciones sin buscar de nuevo.
+
+**Resultado obtenido:** los campos Check-in y Check-out quedan vacíos y la columna Disponibilidad vuelve a "Elija fechas". También se pierden al recargar el listado.
+
+**Análisis:** el detalle recibe las fechas en la URL (`/habitaciones/H105?checkIn=…&checkOut=…`), pero el listado no las guarda en la suya (queda en `/habitaciones`), así que al volver no tiene de dónde recuperarlas.
+
+**Prioridad:** Media, porque afecta al recorrido principal de "buscar → ver detalle → comparar" antes de reservar.
+
+**Evidencia:** [capturas de cada paso con DevTools y video](evidencias/DEF-015/)
+
+---
+
 ## Verificado sin defecto
 
 Comprobaciones automatizadas que **pasan** (se ejecutan con `npm test`):
@@ -429,3 +480,12 @@ Comprobaciones automatizadas que **pasan** (se ejecutan con `npm test`):
 | Las reglas de noches, fechas, capacidad y fechas ocupadas se validan también fuera del formulario | *Las reglas de la reserva se validan también fuera del formulario* |
 | Límite de reservas activas según el tipo de usuario: Huésped 2, Corporativo 6; Frecuente 4 (sflores no llega a reservar por el no-show) | *No se puede superar el límite de reservas activas* |
 | Varios clics seguidos en Confirmar crean una sola reserva | *Varios clics seguidos en Confirmar crean una sola reserva* |
+| Desde dos pestañas no se supera el límite ni se reservan las mismas fechas | *No se puede superar el límite reservando desde dos pestañas* · *No se pueden reservar las mismas fechas desde dos pestañas* |
+| XSS en el titular y en las solicitudes especiales no ejecuta código | *Un intento de XSS en los datos de la reserva no ejecuta código* |
+| Un `userId` ajeno se ignora: la reserva se crea a nombre del usuario con sesión | *La reserva se crea siempre a nombre del usuario con sesión* |
+| No se puede cancelar ni modificar la reserva de otro usuario | *No se puede operar sobre la reserva de otro usuario* |
+| "Reservar" desde el listado aplica las mismas reglas y la reserva aparece en Mis reservas | *Reservar 6 noches desde el botón Reservar del listado* |
+| La búsqueda por fechas muestra la disponibilidad en el listado y en el detalle (botón deshabilitado si no está disponible); "Limpiar fechas" la quita | *El detalle muestra que la habitación está / no está disponible…* · *Limpiar las fechas de búsqueda…* |
+| El formulario se abre con las fechas buscadas, desde el detalle y desde el listado | *El formulario se abre con las fechas buscadas* |
+| Con varios huéspedes el total no cambia (tarifa por habitación) y Mis reservas muestra la cantidad | *Reservar 6 noches para varios huéspedes* |
+| El calendario no permite ir antes del mes actual ni después del mes del día 180 | *Navegación del calendario dentro del rango permitido* |

@@ -146,9 +146,10 @@ features/
 │   ├── myBookings.page.js                  # /mis-reservas
 │   └── components/
 │       ├── bookingModal.js                 # modal de reserva
+│       ├── calendar.js                     # calendario (búsqueda y reserva)
 │       ├── header.js                       # cabecera (usuario, menú, cerrar sesión)
 │       └── footer.js                       # pie de página (restablecer datos)
-├── step-definitions/                       # implementación de los pasos
+├── step-definitions/                       # implementación de los pasos (sin selectores)
 │   ├── hooks.js                            # limpieza, capturas, diagnóstico y cierre de pestañas
 │   ├── login.steps.js
 │   ├── inspection.steps.js                 # inspección de almacenamiento, caché y seguridad
@@ -305,21 +306,28 @@ organizados por funcionalidad:
 
 | Grupo | Qué se prueba |
 |---|---|
-| **Ingreso y detalle de la habitación** (`@smoke`) | Listado después del login. Detalle desde "Ver detalle" de 3 habitaciones (una en la página 3 del listado): tipo, capacidad, tarifa, piso, vista y servicios. Volver al listado. El formulario muestra la habitación, la tarifa y las reglas. Titular y correo precargados para los 5 usuarios activos |
-| **Reserva de 6 noches** (`@smoke`) | Reserva de 6 noches con `lvargas`, `dchoque` y `admin`: resumen (6 noches, Bs 2.100), confirmación, cierre del formulario y fechas ocupadas en el detalle. **En Mis reservas:** código, habitación, check-in, check-out, noches, huéspedes, total, modificaciones 0/1, estado "Confirmada", acciones disponibles y contador de reservas activas. La reserva persiste al recargar y varios clics seguidos crean una sola |
+| **Ingreso y detalle de la habitación** (`@smoke`) | Listado después del login. Detalle desde "Ver detalle" de 3 habitaciones (una en la página 3 del listado): tipo, capacidad, tarifa, piso, vista y servicios. Volver al listado. El formulario muestra la habitación, la tarifa y las reglas. Titular y correo precargados para los 5 usuarios activos. **Disponibilidad:** sin fechas pide elegirlas; con fechas buscadas, el listado y el detalle muestran "Disponible" o "No disponible" (con el botón deshabilitado); "Limpiar fechas" la quita; al volver del detalle se conservan las fechas buscadas |
+| **Reserva de 6 noches** (`@smoke`) | Reserva de 6 noches con `lvargas`, `dchoque` y `admin`: resumen (6 noches, Bs 2.100), confirmación, cierre del formulario y fechas ocupadas en el detalle. **En Mis reservas:** código, habitación, check-in, check-out, noches, huéspedes, total, modificaciones 0/1, estado "Confirmada", acciones disponibles y contador de reservas activas. También desde el botón "Reservar" del listado, con las fechas buscadas precargadas (desde el detalle y desde el listado) y para 4 huéspedes. La reserva persiste al recargar y varios clics seguidos crean una sola |
 | **Rango de noches** | Se puede elegir 1 y 14 noches, pero no 15. El mismo día como check-out no crea una estadía de 0 noches. No se puede elegir un check-out anterior al check-in |
-| **Fechas permitidas** | Ayer y hoy deshabilitados, mañana habilitado, día 180 habilitado y día 181 deshabilitado. Las fechas reservadas se bloquean y una estadía no puede cruzarlas |
-| **Campos obligatorios y validaciones** (`@negative`) | Hora de llegada, política de cancelación, titular (vacío, 2 caracteres, solo espacios, con números), correo (vacío, dominio real, sin arroba), solicitudes especiales (200 sí, 201 no). Huéspedes según la capacidad. Cancelar y Escape cierran sin reservar |
+| **Fechas permitidas** | Navegación del calendario: no retrocede antes del mes actual ni avanza después del mes del día 180; se abre y cierra con su botón y con el campo. Ayer y hoy deshabilitados, mañana habilitado, día 180 habilitado y día 181 deshabilitado. Las fechas reservadas se bloquean y una estadía no puede cruzarlas. Dos pestañas no pueden reservar las mismas fechas |
+| **Campos obligatorios y validaciones** (`@negative`) | Hora de llegada, política de cancelación, titular (vacío, 2 caracteres, solo espacios, con números), correo (vacío, dominio real, sin arroba), solicitudes especiales (200 sí, 201 no). Huéspedes según la capacidad. Cancelar y Escape cierran sin reservar. Un intento de XSS en el titular y en las solicitudes no ejecuta código |
 | **Cálculo del total** | Tarifa × noches para 1, 6 y 14 noches (Bs 180, Bs 2.100, Bs 16.800), en el formulario y en Mis reservas |
-| **Reglas fuera del formulario** (`@security`) | Se envían a la lógica de la aplicación (`window.__hotelApi`) datos que el calendario no permite elegir: 0 y 15 noches, check-in hoy o después de 180 días, más huéspedes que la capacidad, fechas ocupadas y un total manipulado. Verifica que las reglas no dependan solo de la interfaz |
-| **Límite de reservas activas** | Contador "Reservas activas: X de N" de los 5 usuarios activos. El límite de cada tipo de usuario: Huésped 2 (`lvargas`, `rmamani`), Corporativo 6 (`dchoque`, `admin`). El no-show de `sflores`. El usuario bloqueado `ptorrez`. Aviso al abrir el formulario cuando el usuario no puede reservar |
+| **Reglas fuera del formulario** (`@security`) | Se envían a la lógica de la aplicación (`window.__hotelApi`) datos que el calendario no permite elegir: 0 y 15 noches, check-in hoy o después de 180 días, más huéspedes que la capacidad, fechas ocupadas y un total manipulado. También un `userId` ajeno, cancelar o modificar la reserva de otro usuario y reservar estando bloqueado. Verifica que las reglas no dependan solo de la interfaz |
+| **Límite de reservas activas y estado del usuario** | Contador "Reservas activas: X de N" de los 5 usuarios activos. El límite de cada tipo de usuario: Huésped 2 (`lvargas`, `rmamani`), Corporativo 6 (`dchoque`, `admin`), también reservando desde dos pestañas. El no-show de `sflores`. Aviso al abrir el formulario cuando el usuario no puede reservar |
 | **Accesibilidad** (`@accessibility`) | El foco pasa al formulario al abrirlo. Los errores se marcan de forma accesible |
+
+**Sin duplicar otros incisos:** el inciso 2 prueba solo lo propio de ver el detalle y reservar. No
+repite lo que ya cubre el inciso 1: que `ptorrez` (bloqueado) no pueda iniciar sesión, las rutas
+protegidas y la sesión entre pestañas. El usuario bloqueado se prueba únicamente contra la lógica de
+la reserva (BUG-004), para no depender de BUG-002. Los filtros y el orden del listado y los filtros
+de Mis reservas quedan fuera porque no forman parte del flujo pedido (los de Mis reservas
+corresponden al inciso 4).
 
 ### Decisiones técnicas
 
 - **Fechas relativas a hoy**: los escenarios dicen "dentro de 30 días" y [`features/support/formatters.js`](features/support/formatters.js) calcula la fecha, el formato `dd/mm/aaaa` y el monto `Bs 2.100`. Las pruebas funcionan cualquier día.
-- **Calendario en el page object**: [`bookingModal.js`](features/pageobjects/components/bookingModal.js) navega por los meses hasta el día pedido (atributo `data-date`). Los steps solo dicen qué fecha elegir.
-- **Listado paginado**: `RoomsPage.openRoomDetail` avanza de página hasta encontrar la habitación, como lo haría un usuario.
+- **Calendario como componente**: la búsqueda del listado y el formulario usan el mismo calendario con distintos ids, así que [`calendar.js`](features/pageobjects/components/calendar.js) lo implementa una sola vez (`new Calendar('search')` y `new Calendar('reservation')`). Navega por los meses hasta el día pedido (atributo `data-date`); los steps solo dicen qué fecha elegir.
+- **Listado paginado**: `RoomsPage.showRoom` avanza de página hasta encontrar la fila de la habitación, como lo haría un usuario. La fila se busca por el código y no por el enlace, porque con fechas buscadas el enlace incluye `?checkIn=…&checkOut=…`.
 - **La reserva se identifica por su código**: se toma del mensaje de confirmación y se usa para encontrar la fila en Mis reservas.
 - **"La reserva no debería crearse"** no solo revisa la pantalla: compara la cantidad de reservas del usuario en el almacenamiento antes y después de confirmar.
 - **Precondiciones desde la interfaz**: "completé mis reservas activas hasta el límite" lee el límite en Mis reservas y crea las reservas necesarias con el formulario, sin modificar datos a mano.
@@ -328,23 +336,38 @@ organizados por funcionalidad:
 
 ### Defectos encontrados
 
-Al ejecutar las pruebas, 4 escenarios no se cumplieron. Se documentaron en
-[`docs/REPORTE_DEFECTOS.md`](docs/REPORTE_DEFECTOS.md):
+Al ejecutar las pruebas se encontraron **6 defectos: 1 bug de severidad alta y 5 de severidad
+baja**. Fallan 8 escenarios, porque algunos defectos se prueban en más de un caso. Se
+documentaron en [`docs/REPORTE_DEFECTOS.md`](docs/REPORTE_DEFECTOS.md):
 
 | ID | Defecto | Severidad |
 |---|---|---|
+| BUG-004 | Un usuario bloqueado puede seguir creando reservas: la reserva no valida el estado del usuario | Alta |
+| DEF-015 | Al volver del detalle se pierden las fechas buscadas | Baja |
 | DEF-013 | Quien no puede reservar (límite o no-show) se entera recién al confirmar | Baja |
 | DEF-014 | El nombre del titular acepta números | Baja |
 | DEF-011 | El foco no pasa al formulario de reserva al abrirlo | Baja |
 | DEF-012 | El formulario de reserva no marca de forma accesible los errores | Baja |
 
 Las reglas de negocio principales (noches, fechas, campos, total y límite) **se cumplen**, también
-fuera de la interfaz. Los defectos son de usabilidad, validación de datos y accesibilidad.
+fuera de la interfaz y desde dos pestañas. La excepción es el **estado del usuario**: la reserva no
+verifica si el usuario está bloqueado (BUG-004). Este bug se encontró en una segunda exploración
+dirigida a los riesgos de severidad alta: usuario bloqueado, XSS, reservas a nombre de otro
+usuario y concurrencia entre pestañas. El resto de esos riesgos se cumplió y quedó como prueba de
+regresión `@security`. Una tercera revisión cubrió las funciones del flujo que faltaban (reservar
+desde el listado, disponibilidad por fechas, varios huéspedes y navegación del calendario) y
+encontró DEF-015.
 
 Durante el análisis, varios fallos resultaron ser **errores de la prueba** y se corrigieron sin
 reportarlos: la tabla de habitaciones aún no se había dibujado después del login, el formulario
 abierto tapaba el menú y un escenario suponía que se podía elegir un check-out anterior al check-in
 (el calendario lo deshabilita, que es lo correcto).
+
+También se detectó y corrigió un **falso positivo**: el paso "la reserva no debería crearse"
+verificaba de inmediato, pero la app tarda cerca de un segundo en guardar la reserva. Cuando ningún
+paso anterior esperaba un mensaje, la verificación pasaba antes de que la reserva se creara, y el
+escenario del usuario bloqueado salía en verde aunque la exploración mostraba lo contrario. Ahora el
+paso espera la respuesta de la app (confirmación o error) antes de verificar.
 
 ## Inciso 3: Registro y reserva de 2 noches
 
