@@ -14,7 +14,6 @@
   "scripts": {
     "clean": "node -e \"['allure-results','allure-report','videos'].forEach(d => require('fs').rmSync(d, { recursive: true, force: true }))\"",
     "test": "wdio run ./wdio.conf.js",
-    "wdio": "wdio run ./wdio.conf.js",
     "test:regresion": "wdio run ./wdio.conf.js --cucumberOpts.tags=\"not @bug\"",
     "test:bugs": "wdio run ./wdio.conf.js --cucumberOpts.tags=@bug",
     "test:evidencias": "wdio run ./wdio.devtools.conf.js",
@@ -26,8 +25,15 @@
     "type": "git",
     "url": "git+https://github.com/marianZamorano/examenPruebaRoy.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "webdriverio",
+    "cucumber",
+    "allure",
+    "page-object-model",
+    "e2e",
+    "qa"
+  ],
+  "author": "Marian Zamorano",
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
