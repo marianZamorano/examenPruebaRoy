@@ -1,0 +1,7 @@
+{
+  "id": "DEF-009",
+  "escenario": "Restablecer datos pide confirmación",
+  "estado": "FAILED",
+  "mensaje": "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: true\nReceived: false",
+  "fecha": "2026-11-03T05:24:05.819Z"
+}

@@ -1,0 +1,7 @@
+{
+  "id": "DEF-007",
+  "escenario": "La sesión almacenada tiene fecha de expiración",
+  "estado": "FAILED",
+  "mensaje": "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: true\nReceived: false",
+  "fecha": "2026-11-03T05:23:36.998Z"
+}
