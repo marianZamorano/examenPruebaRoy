@@ -35,6 +35,16 @@ function issueId (pickle = currentScenario) {
     return issueTag ? issueTag.split('=')[1] : null
 }
 
+// Carpeta de evidencia del escenario: docs/evidencias/<ID>/. Si el escenario es
+// un ejemplo de un Scenario Outline, cada ejemplo tiene su subcarpeta (por el
+// texto entre paréntesis del nombre) para que no se pisen las capturas.
+function evidenceDir (pickle = currentScenario) {
+    const id = issueId(pickle)
+    if (!id) return null
+    const example = pickle.astNodeIds.length > 1 && pickle.name.match(/\(([^()]+)\)\s*$/)
+    return example ? path.join(EVIDENCE_DIR, id, slug(example[1])) : path.join(EVIDENCE_DIR, id)
+}
+
 function slug (text) {
     return text.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '_').replace(/^_|_$/g, '').slice(0, 60)
 }
@@ -96,8 +106,8 @@ async function captureStep (stepText, passed) {
     }
 
     await browser.pause(400)
-    const id = issueId()
-    const dir = id ? path.join(EVIDENCE_DIR, id, 'pasos') : fs.mkdtempSync(path.join(require('os').tmpdir(), 'paso-'))
+    const scenarioDir = evidenceDir()
+    const dir = scenarioDir ? path.join(scenarioDir, 'pasos') : fs.mkdtempSync(path.join(require('os').tmpdir(), 'paso-'))
     fs.mkdirSync(dir, { recursive: true })
     const file = path.join(dir, `${String(stepNumber).padStart(2, '0')}_${passed ? '' : 'FALLO_'}${slug(stepText)}.jpg`)
     execFileSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', CAPTURE_SCRIPT,
@@ -112,6 +122,7 @@ module.exports = {
     setCurrentScenario,
     getCurrentScenario,
     issueId,
+    evidenceDir,
     collectDiagnostics,
     readBrowserStorage,
     logToConsole,

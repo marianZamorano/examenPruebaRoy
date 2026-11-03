@@ -4,7 +4,7 @@ const fs = require('fs')
 const path = require('path')
 
 const {
-    DEVTOOLS_MODE, EVIDENCE_DIR, setCurrentScenario, issueId,
+    DEVTOOLS_MODE, setCurrentScenario, issueId, evidenceDir,
     collectDiagnostics, attachJson, captureStep
 } = require('../support/inspector')
 
@@ -31,8 +31,9 @@ AfterStep(async ({ pickleStep, result }) => {
 After(async ({ pickle, result }) => {
     const id = issueId(pickle)
     if (DEVTOOLS_MODE && id) {
-        fs.mkdirSync(path.join(EVIDENCE_DIR, id), { recursive: true })
-        fs.writeFileSync(path.join(EVIDENCE_DIR, id, 'resultado.json'), JSON.stringify({
+        const dir = evidenceDir(pickle)
+        fs.mkdirSync(dir, { recursive: true })
+        fs.writeFileSync(path.join(dir, 'resultado.json'), JSON.stringify({
             id,
             escenario: pickle.name,
             estado: result.status,
