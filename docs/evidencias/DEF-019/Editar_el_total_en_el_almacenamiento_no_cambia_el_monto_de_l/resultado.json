@@ -1,0 +1,7 @@
+{
+  "id": "DEF-019",
+  "escenario": "Editar el total en el almacenamiento no cambia el monto de la reserva",
+  "estado": "FAILED",
+  "mensaje": "Error: Expect $(`tr[data-reservation-id=\"R0008\"] td[data-col=\"total\"]`) to have text\n\nExpected: \"Bs 2.100\"\nReceived: \"Bs 1\"",
+  "fecha": "2026-11-03T18:11:55.952Z"
+}

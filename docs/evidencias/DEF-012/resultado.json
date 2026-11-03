@@ -3,5 +3,5 @@
   "escenario": "Los errores del formulario de reserva se marcan de forma accesible",
   "estado": "FAILED",
   "mensaje": "Error: Expect $(`#reservation-modal [name=\"arrivalTime\"]`) to have attribute aria-invalid\n\nExpected: \"true\"\nReceived: no attribute",
-  "fecha": "2026-11-03T15:28:59.423Z"
+  "fecha": "2026-11-03T18:08:48.695Z"
 }

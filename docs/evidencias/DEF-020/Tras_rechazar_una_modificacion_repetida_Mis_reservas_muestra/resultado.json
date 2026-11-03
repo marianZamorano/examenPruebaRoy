@@ -1,0 +1,7 @@
+{
+  "id": "DEF-020",
+  "escenario": "Tras rechazar una modificación repetida, Mis reservas muestra el estado actual",
+  "estado": "FAILED",
+  "mensaje": "Error: Expect $(`tr[data-reservation-id=\"R0008\"] td[data-col=\"check-out\"]`) to have text\n\nExpected: \"17/12/2026\"\nReceived: \"09/12/2026\"",
+  "fecha": "2026-11-03T18:13:26.020Z"
+}

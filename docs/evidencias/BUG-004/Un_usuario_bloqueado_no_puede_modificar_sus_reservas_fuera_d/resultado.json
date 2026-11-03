@@ -1,0 +1,7 @@
+{
+  "id": "BUG-004",
+  "escenario": "Un usuario bloqueado no puede modificar sus reservas fuera del formulario",
+  "estado": "FAILED",
+  "mensaje": "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: false\nReceived: true",
+  "fecha": "2026-11-03T18:11:15.163Z"
+}

@@ -3,5 +3,5 @@
   "escenario": "Un nombre muy largo no rompe la pantalla",
   "estado": "FAILED",
   "mensaje": "Error: expect(received).toBeLessThanOrEqual(expected)\n\nExpected: <= 765\nReceived:    44210",
-  "fecha": "2026-11-03T15:30:25.756Z"
+  "fecha": "2026-11-03T18:10:27.664Z"
 }

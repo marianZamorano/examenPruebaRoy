@@ -3,5 +3,5 @@
   "escenario": "El nombre del titular no acepta números",
   "estado": "FAILED",
   "mensaje": "Error: Expect $(`#guestName-error`) to be displayed\n\nExpected: \"displayed\"\nReceived: \"not displayed\"",
-  "fecha": "2026-11-03T15:27:42.849Z"
+  "fecha": "2026-11-03T18:07:23.245Z"
 }

@@ -3,5 +3,5 @@
   "escenario": "La contraseña del usuario nuevo no se guarda legible",
   "estado": "FAILED",
   "mensaje": "Error: expect(received).toEqual(expected) // deep equality\n\n- Expected  - 1\n+ Received  + 1",
-  "fecha": "2026-11-03T15:29:28.637Z"
+  "fecha": "2026-11-03T18:09:20.698Z"
 }

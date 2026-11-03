@@ -3,5 +3,5 @@
   "escenario": "Los errores del registro se marcan de forma accesible",
   "estado": "FAILED",
   "mensaje": "Error: Expect $(`form[name=\"registerForm\"] [name=\"fullName\"]`) to have attribute aria-invalid\n\nExpected: \"true\"\nReceived: no attribute",
-  "fecha": "2026-11-03T15:30:41.175Z"
+  "fecha": "2026-11-03T18:10:43.985Z"
 }

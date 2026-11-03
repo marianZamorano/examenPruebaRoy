@@ -3,5 +3,5 @@
   "escenario": "Cerrar sesión en una pestaña cierra la sesión en las demás",
   "estado": "FAILED",
   "mensaje": "Error: Expect chrome's window to have url\n\nExpected: StringContaining \"/login\"\nReceived: \"https://hotel-qa-f51.pages.dev/mis-reservas\"",
-  "fecha": "2026-11-03T15:24:58.374Z"
+  "fecha": "2026-11-03T18:04:31.039Z"
 }
