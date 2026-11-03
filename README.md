@@ -10,6 +10,34 @@ Resolución de la prueba diagnóstica de automatización E2E sobre [Hotel QA](ht
 - Page Object Model (POM)
 - Allure Report
 
+## Requisitos
+
+- Node.js 20 o superior
+- Java 8 o superior (para generar el reporte de Allure)
+- Google Chrome
+
+## Instalación
+
+```bash
+npm install
+```
+
+## Ejecución
+
+```bash
+npm test          # ejecuta todos los features
+npm run report    # genera y abre el reporte de Allure
+```
+
+## Estructura
+
+```
+features/
+├── *.feature            # escenarios en Gherkin (uno por inciso)
+├── pageobjects/         # Page Objects (POM)
+└── step-definitions/    # implementación de los pasos
+```
+
 ## Incisos
 
 1. Login para acceder a la página.
