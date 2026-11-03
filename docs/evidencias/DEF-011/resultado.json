@@ -3,5 +3,5 @@
   "escenario": "El foco pasa al formulario de reserva al abrirlo",
   "estado": "FAILED",
   "mensaje": "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: true\nReceived: false",
-  "fecha": "2026-11-03T08:37:07.511Z"
+  "fecha": "2026-11-03T15:28:35.389Z"
 }

@@ -3,5 +3,5 @@
   "escenario": "Restablecer datos pide confirmación",
   "estado": "FAILED",
   "mensaje": "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: true\nReceived: false",
-  "fecha": "2026-11-03T08:34:22.812Z"
+  "fecha": "2026-11-03T15:26:16.031Z"
 }

@@ -1,0 +1,7 @@
+{
+  "id": "DEF-018",
+  "escenario": "La contraseña no puede ser igual al usuario",
+  "estado": "FAILED",
+  "mensaje": "Error: Expect $(`#password-error`) to be displayed\n\nExpected: \"displayed\"\nReceived: \"not displayed\"",
+  "fecha": "2026-11-03T15:29:50.758Z"
+}

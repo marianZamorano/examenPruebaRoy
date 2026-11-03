@@ -1,0 +1,7 @@
+{
+  "id": "DEF-014",
+  "escenario": "El nombre del usuario no acepta números",
+  "estado": "FAILED",
+  "mensaje": "Error: Expect $(`#fullName-error`) to be displayed\n\nExpected: \"displayed\"\nReceived: \"not displayed\"",
+  "fecha": "2026-11-03T15:30:10.567Z"
+}

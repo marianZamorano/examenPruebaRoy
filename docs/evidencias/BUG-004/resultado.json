@@ -3,5 +3,5 @@
   "escenario": "Un usuario bloqueado no puede reservar fuera del formulario",
   "estado": "FAILED",
   "mensaje": "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: false\nReceived: true",
-  "fecha": "2026-11-03T08:36:15.139Z"
+  "fecha": "2026-11-03T15:27:50.535Z"
 }

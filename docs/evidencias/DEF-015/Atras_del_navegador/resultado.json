@@ -3,5 +3,5 @@
   "escenario": "Volver del detalle conserva las fechas buscadas (Atrás del navegador)",
   "estado": "FAILED",
   "mensaje": "Error: Expect $(`#search-checkin`) to have property value\n\nExpected: \"03/12/2026\"\nReceived: \"\"",
-  "fecha": "2026-11-03T08:35:35.107Z"
+  "fecha": "2026-11-03T15:27:17.458Z"
 }

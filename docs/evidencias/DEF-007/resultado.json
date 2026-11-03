@@ -3,5 +3,5 @@
   "escenario": "La sesión almacenada tiene fecha de expiración",
   "estado": "FAILED",
   "mensaje": "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: true\nReceived: false",
-  "fecha": "2026-11-03T08:33:48.053Z"
+  "fecha": "2026-11-03T15:25:48.217Z"
 }

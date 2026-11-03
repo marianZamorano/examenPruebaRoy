@@ -1,7 +1,0 @@
-{
-  "id": "DEF-010",
-  "escenario": "Los errores del formulario se marcan de forma accesible",
-  "estado": "FAILED",
-  "mensaje": "Error: Expect $(`#login-username`) to have attribute aria-invalid\n\nExpected: \"true\"\nReceived: no attribute",
-  "fecha": "2026-11-03T08:34:40.325Z"
-}

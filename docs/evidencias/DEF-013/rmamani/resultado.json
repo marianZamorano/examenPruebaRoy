@@ -3,5 +3,5 @@
   "escenario": "Un usuario que no puede reservar es avisado al abrir el formulario (rmamani)",
   "estado": "FAILED",
   "mensaje": "Error: Can't call getText on element with selector \"#reservation-error\" because element wasn't found\n    at implicitWait (file:///C:/Repositorios/examenPruebaRoy/node_modules/webdriverio/build/node.js:1948:25)\n    at async invokeElementCommand (file:///C:/Repositorios/examenPruebaRoy/node_modules/webdriverio/build/node.js:16370:19)\n    at async Element.wrapCommandFn (file:///C:/Repositorios/examenPruebaRoy/node_modules/@wdio/utils/build/index.js:1422:23)",
-  "fecha": "2026-11-03T08:36:35.789Z"
+  "fecha": "2026-11-03T15:28:08.970Z"
 }

@@ -3,5 +3,5 @@
   "escenario": "Volver del detalle conserva las fechas buscadas (Volver a habitaciones)",
   "estado": "FAILED",
   "mensaje": "Error: Expect $(`#search-checkin`) to have property value\n\nExpected: \"03/12/2026\"\nReceived: \"\"",
-  "fecha": "2026-11-03T08:35:11.087Z"
+  "fecha": "2026-11-03T15:26:56.360Z"
 }

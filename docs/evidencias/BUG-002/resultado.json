@@ -3,5 +3,5 @@
   "escenario": "Un usuario bloqueado durante su sesión debería perder el acceso",
   "estado": "FAILED",
   "mensaje": "Error: Expect chrome's window to have url\n\nExpected: StringContaining \"/login\"\nReceived: \"https://hotel-qa-f51.pages.dev/habitaciones\"",
-  "fecha": "2026-11-03T08:33:15.294Z"
+  "fecha": "2026-11-03T15:25:20.714Z"
 }
