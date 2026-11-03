@@ -3,5 +3,5 @@
   "escenario": "El mensaje de error desaparece al corregir los datos",
   "estado": "FAILED",
   "mensaje": "Error: Expect $(`#login-error`) not to be displayed\n\nExpected: \"not displayed\"\nReceived: \"displayed\"",
-  "fecha": "2026-11-03T05:23:28.003Z"
+  "fecha": "2026-11-03T05:56:17.430Z"
 }

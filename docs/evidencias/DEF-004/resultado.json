@@ -3,5 +3,5 @@
   "escenario": "No se puede suplantar una sesión editando el almacenamiento",
   "estado": "FAILED",
   "mensaje": "Error: Expect chrome's window to have url\n\nExpected: StringContaining \"/login\"\nReceived: \"https://hotel-qa-f51.pages.dev/habitaciones\"",
-  "fecha": "2026-11-03T05:22:44.590Z"
+  "fecha": "2026-11-03T05:55:51.382Z"
 }

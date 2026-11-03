@@ -2,7 +2,7 @@
 
 > Archivo generado automáticamente por `npm run test:evidencias`. No editar a mano.
 
-**Fecha de ejecución:** martes, 3 de noviembre de 2026, 1:24 a. m.
+**Fecha de ejecución:** martes, 3 de noviembre de 2026, 1:56 a. m.
 
 Cada carpeta contiene la captura con DevTools de cada paso (`pasos/`), el video del escenario
 (`video.webm`) y el resultado (`resultado.json`). El historial de ejecuciones anteriores está en

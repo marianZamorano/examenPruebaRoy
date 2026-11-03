@@ -3,5 +3,5 @@
   "escenario": "Tras cerrar sesión, volver atrás no muestra datos del usuario",
   "estado": "FAILED",
   "mensaje": "Error: Expect chrome's window to have url\n\nExpected: StringContaining \"/login\"\nReceived: \"https://hotel-qa-f51.pages.dev/mis-reservas\"",
-  "fecha": "2026-11-03T05:21:24.171Z"
+  "fecha": "2026-11-03T05:54:39.176Z"
 }
