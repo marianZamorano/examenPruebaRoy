@@ -57,6 +57,49 @@ Feature: Reserva de habitación por 6 noches
       | dchoque | Huesped123! | Daniel Choque  | dchoque@hotel.test |
       | admin   | Admin123!   | Ana Admin      | admin@hotel.test   |
 
+  Scenario: Sin fechas buscadas, el detalle pide elegirlas
+    Given que inicié sesión con usuario "lvargas" y contraseña "Huesped123!"
+    Then la habitación "H105" debería figurar como "Elija fechas" en el listado
+    When abro el detalle de la habitación "H105" desde el listado
+    Then el detalle debería indicar "Elija fechas en la búsqueda para ver la disponibilidad"
+
+  Scenario: El detalle muestra que la habitación está disponible para las fechas buscadas
+    Given que inicié sesión con usuario "lvargas" y contraseña "Huesped123!"
+    When busco habitaciones con check-in dentro de 30 días por 6 noches
+    Then la habitación "H105" debería figurar como "Disponible" en el listado
+    When abro el detalle de la habitación "H105" desde el listado
+    Then el detalle debería indicar "Disponible para las fechas seleccionadas"
+    And el botón Reservar del detalle debería estar "habilitado"
+
+  Scenario: El detalle muestra que la habitación no está disponible para las fechas buscadas
+    Given que inicié sesión con usuario "lvargas" y contraseña "Huesped123!"
+    And reservé la habitación "H105" por 6 noches con check-in dentro de 30 días
+    When voy a "Habitaciones" desde el menú
+    And busco habitaciones con check-in dentro de 30 días por 6 noches
+    Then la habitación "H105" debería figurar como "No disponible" en el listado
+    When abro el detalle de la habitación "H105" desde el listado
+    Then el detalle debería indicar "No disponible para las fechas seleccionadas"
+    And el botón Reservar del detalle debería estar "deshabilitado"
+
+  Scenario: Limpiar las fechas de búsqueda quita la disponibilidad
+    Given que inicié sesión con usuario "lvargas" y contraseña "Huesped123!"
+    When busco habitaciones con check-in dentro de 30 días por 6 noches
+    And limpio las fechas de búsqueda
+    Then la habitación "H105" debería figurar como "Elija fechas" en el listado
+
+  @bug @severity=minor @issue=DEF-015
+  Scenario Outline: Volver del detalle conserva las fechas buscadas (<forma>)
+    Given que inicié sesión con usuario "lvargas" y contraseña "Huesped123!"
+    When busco habitaciones con check-in dentro de 30 días por 6 noches
+    And abro el detalle de la habitación "H105" desde el listado
+    And vuelvo al listado con "<forma>"
+    Then las fechas buscadas deberían conservarse
+
+    Examples:
+      | forma                 |
+      | Volver a habitaciones |
+      | Atrás del navegador   |
+
   # ---------- Reserva de 6 noches ----------
 
   @smoke
@@ -93,6 +136,43 @@ Feature: Reserva de habitación por 6 noches
       | lvargas | Huesped123! | Reservas activas: 2 de 2 |
       | dchoque | Huesped123! | Reservas activas: 2 de 6 |
       | admin   | Admin123!   | Reservas activas: 1 de 6 |
+
+  Scenario: Reservar 6 noches desde el botón Reservar del listado
+    Given que inicié sesión con usuario "lvargas" y contraseña "Huesped123!"
+    When abro el formulario de reserva de la habitación "H105" desde "el listado"
+    And elijo un check-in dentro de 30 días por 6 noches
+    Then el resumen debería mostrar "6 noches" y un total de "Bs 2.100"
+    When completo la hora de llegada y acepto la política de cancelación
+    And confirmo la reserva
+    Then debería ver la confirmación de la reserva
+    And el formulario de reserva debería cerrarse
+    When voy a "Mis reservas" desde el menú
+    Then debería ver la reserva con habitación "H105 · Doble", 6 noches, 1 huésped y total "Bs 2.100"
+
+  Scenario Outline: El formulario se abre con las fechas buscadas (desde <origen>)
+    Given que inicié sesión con usuario "lvargas" y contraseña "Huesped123!"
+    When busco habitaciones con check-in dentro de 30 días por 6 noches
+    And abro el formulario de reserva de la habitación "H105" desde "<origen>"
+    Then el resumen debería mostrar "6 noches" y un total de "Bs 2.100"
+    And el botón Confirmar reserva debería estar "habilitado"
+
+    Examples:
+      | origen      |
+      | el detalle  |
+      | el listado  |
+
+  Scenario: Reservar 6 noches para varios huéspedes
+    Given que inicié sesión con usuario "lvargas" y contraseña "Huesped123!"
+    And estoy en el detalle de la habitación "H106"
+    When abro el formulario de reserva
+    And elijo un check-in dentro de 30 días por 6 noches
+    And elijo 4 huéspedes
+    Then el resumen debería mostrar "6 noches" y un total de "Bs 2.880"
+    When completo la hora de llegada y acepto la política de cancelación
+    And confirmo la reserva
+    Then debería ver la confirmación de la reserva
+    When voy a "Mis reservas" desde el menú
+    Then debería ver la reserva con habitación "H106 · Familiar", 6 noches, 4 huéspedes y total "Bs 2.880"
 
   Scenario: La reserva se mantiene al recargar la página
     Given que inicié sesión con usuario "lvargas" y contraseña "Huesped123!"
@@ -143,6 +223,27 @@ Feature: Reserva de habitación por 6 noches
 
   # ---------- Fechas permitidas ----------
 
+  Scenario: Navegación del calendario dentro del rango permitido
+    Given que inicié sesión con usuario "lvargas" y contraseña "Huesped123!"
+    And estoy en el detalle de la habitación "H105"
+    When abro el formulario de reserva
+    Then el calendario debería estar "cerrado"
+    When abro el calendario del formulario
+    Then el calendario debería mostrar el mes del día dentro de 0 días
+    And el botón de mes "anterior" del calendario debería estar "deshabilitado"
+    When avanzo un mes en el calendario
+    Then el calendario debería mostrar el mes siguiente al actual
+    And el botón de mes "anterior" del calendario debería estar "habilitado"
+    When retrocedo un mes en el calendario
+    Then el calendario debería mostrar el mes del día dentro de 0 días
+    When avanzo hasta el último mes del calendario
+    Then el calendario debería mostrar el mes del día dentro de 180 días
+    And el botón de mes "siguiente" del calendario debería estar "deshabilitado"
+    When cierro el calendario con su botón
+    Then el calendario debería estar "cerrado"
+    When abro el calendario desde el campo check-in
+    Then el calendario debería estar "abierto"
+
   Scenario Outline: Días que se pueden elegir como check-in (<caso>)
     Given que inicié sesión con usuario "lvargas" y contraseña "Huesped123!"
     And estoy en el detalle de la habitación "H105"
@@ -171,6 +272,25 @@ Feature: Reserva de habitación por 6 noches
     And elijo en el calendario el día dentro de 27 días
     Then el día dentro de 30 días debería estar "habilitado" en el calendario
     And el día dentro de 31 días debería estar "deshabilitado" en el calendario
+
+  Scenario: No se pueden reservar las mismas fechas desde dos pestañas
+    Given que inicié sesión con usuario "dchoque" y contraseña "Huesped123!"
+    And estoy en el detalle de la habitación "H105"
+    And abro el formulario de reserva
+    And elijo un check-in dentro de 30 días por 6 noches
+    And completo la hora de llegada y acepto la política de cancelación
+    And abro la aplicación en una nueva pestaña
+    And estoy en el detalle de la habitación "H105"
+    And abro el formulario de reserva
+    And elijo un check-in dentro de 30 días por 6 noches
+    And completo la hora de llegada y acepto la política de cancelación
+    When cambio a la pestaña 1
+    And confirmo la reserva
+    Then debería ver la confirmación de la reserva
+    When cambio a la pestaña 2
+    And confirmo la reserva
+    Then debería ver el error de la reserva "La habitación ya está reservada en parte de esas fechas."
+    And la reserva no debería crearse
 
   # ---------- Campos obligatorios y validaciones ----------
 
@@ -251,6 +371,21 @@ Feature: Reserva de habitación por 6 noches
     And confirmo la reserva
     Then debería ver un error en el campo "Titular"
     And la reserva no debería crearse
+
+  @security
+  Scenario: Un intento de XSS en los datos de la reserva no ejecuta código
+    Given que inicié sesión con usuario "dchoque" y contraseña "Huesped123!"
+    And estoy en el detalle de la habitación "H105"
+    When abro el formulario de reserva
+    And elijo un check-in dentro de 30 días por 6 noches
+    And completo la hora de llegada y acepto la política de cancelación
+    And cambio el campo "Titular" a "<img src=x onerror=window.__xss=1>"
+    And cambio el campo "Solicitudes especiales" a "<img src=x onerror=window.__xss=1>"
+    And confirmo la reserva
+    Then debería ver la confirmación de la reserva
+    When voy a "Mis reservas" desde el menú
+    Then debería ver la reserva con habitación "H105 · Doble", 6 noches, 1 huésped y total "Bs 2.100"
+    And no debería ejecutarse el código inyectado
 
   @negative
   Scenario: Las solicitudes especiales admiten como máximo 200 caracteres
@@ -356,7 +491,32 @@ Feature: Reserva de habitación por 6 noches
     When solicito a la aplicación una reserva de "H105" con check-in dentro de 32 días por 2 noches para 1 huéspedes
     Then la aplicación debería rechazarla con "La habitación ya está reservada en parte de esas fechas."
 
-  # ---------- Límite de reservas activas según el tipo de usuario ----------
+  @security
+  Scenario: La reserva se crea siempre a nombre del usuario con sesión
+    Given que inicié sesión con usuario "lvargas" y contraseña "Huesped123!"
+    When solicito a la aplicación una reserva de "H105" con check-in dentro de 30 días por 6 noches a nombre del usuario "rmamani"
+    Then la reserva guardada debería pertenecer al usuario "lvargas"
+
+  @security
+  Scenario Outline: No se puede operar sobre la reserva de otro usuario (<accion>)
+    Given que inicié sesión con usuario "lvargas" y contraseña "Huesped123!"
+    When solicito a la aplicación "<accion>" una reserva activa de "rmamani"
+    Then la aplicación debería rechazarla con "La reserva no existe."
+    And la reserva de "rmamani" no debería cambiar
+
+    Examples:
+      | accion    |
+      | cancelar  |
+      | modificar |
+
+  @security @bug @severity=critical @issue=BUG-004
+  Scenario: Un usuario bloqueado no puede reservar fuera del formulario
+    Given que inicié sesión con usuario "dchoque" y contraseña "Huesped123!"
+    And el usuario "dchoque" es bloqueado por recepción
+    When solicito a la aplicación una reserva de "H105" con check-in dentro de 30 días por 6 noches para 1 huésped
+    Then la aplicación debería rechazar la reserva
+
+  # ---------- Límite de reservas activas y estado del usuario ----------
 
   # Las reservas canceladas, finalizadas y no presentadas no cuentan como activas
   Scenario Outline: Reservas activas y límite de cada usuario (<usuario>, <tipo>)
@@ -390,20 +550,31 @@ Feature: Reserva de habitación por 6 noches
       | dchoque | Huesped123! | Corporativo | 6      |
       | admin   | Admin123!   | Corporativo | 6      |
 
+  Scenario: No se puede superar el límite reservando desde dos pestañas
+    Given que inicié sesión con usuario "lvargas" y contraseña "Huesped123!"
+    And estoy en el detalle de la habitación "H105"
+    And abro el formulario de reserva
+    And elijo un check-in dentro de 30 días por 6 noches
+    And completo la hora de llegada y acepto la política de cancelación
+    And abro la aplicación en una nueva pestaña
+    And estoy en el detalle de la habitación "H106"
+    And abro el formulario de reserva
+    And elijo un check-in dentro de 40 días por 6 noches
+    And completo la hora de llegada y acepto la política de cancelación
+    When cambio a la pestaña 1
+    And confirmo la reserva
+    Then debería ver la confirmación de la reserva
+    When cambio a la pestaña 2
+    And confirmo la reserva
+    Then debería ver el error de la reserva "Alcanzó el límite de 2 reservas activas para Huésped."
+    And la reserva no debería crearse
+
   @negative
   Scenario: Un usuario con una reserva no presentada reciente no puede reservar
     Given que inicié sesión con usuario "sflores" y contraseña "Huesped123!"
     When intento reservar la habitación "H105" por 6 noches con check-in dentro de 30 días
     Then debería ver el error de la reserva "Tiene una reserva no presentada en los últimos 30 días. No puede reservar por ahora."
     And la reserva no debería crearse
-
-  @negative
-  Scenario: Un usuario bloqueado no puede llegar a reservar
-    Given que estoy en la página de login
-    When inicio sesión con usuario "ptorrez" y contraseña "Huesped123!"
-    Then debería ver el mensaje de error "Usuario bloqueado. Contacte a recepción."
-    When navego a la ruta "/habitaciones/H105"
-    Then debería permanecer en la página de login
 
   @bug @severity=minor @issue=DEF-013
   Scenario Outline: Un usuario que no puede reservar es avisado al abrir el formulario (<usuario>)
