@@ -1,0 +1,7 @@
+{
+  "id": "DEF-011",
+  "escenario": "El foco pasa al formulario de reserva al abrirlo",
+  "estado": "FAILED",
+  "mensaje": "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: true\nReceived: false",
+  "fecha": "2026-11-03T07:27:27.814Z"
+}

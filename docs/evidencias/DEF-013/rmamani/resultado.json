@@ -1,0 +1,7 @@
+{
+  "id": "DEF-013",
+  "escenario": "Un usuario que no puede reservar es avisado al abrir el formulario (rmamani)",
+  "estado": "FAILED",
+  "mensaje": "Error: Can't call getText on element with selector \"#reservation-error\" because element wasn't found\n    at implicitWait (file:///C:/Repositorios/examenPruebaRoy/node_modules/webdriverio/build/node.js:1948:25)\n    at runNextTicks (node:internal/process/task_queues:65:5)\n    at process.processTimers (node:internal/timers:538:9)",
+  "fecha": "2026-11-03T07:27:01.516Z"
+}

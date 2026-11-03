@@ -3,5 +3,5 @@
   "escenario": "Después del login se vuelve a la página solicitada",
   "estado": "FAILED",
   "mensaje": "Error: Expect chrome's window to have url\n\nExpected: StringContaining \"/mis-reservas\"\nReceived: \"https://hotel-qa-f51.pages.dev/habitaciones\"",
-  "fecha": "2026-11-03T05:54:14.282Z"
+  "fecha": "2026-11-03T07:23:51.746Z"
 }
