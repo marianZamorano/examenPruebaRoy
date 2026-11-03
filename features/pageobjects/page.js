@@ -6,6 +6,11 @@ const { browser } = require('@wdio/globals')
 */
 module.exports = class Page {
     /**
+    * Notificación temporal (toast) que muestra la app tras una acción
+    */
+    get toast () { return $('#toast') }
+
+    /**
     * Opens a sub page of the page (relative to baseUrl in wdio.conf.js)
     * @param path path of the sub page (e.g. login)
     */
