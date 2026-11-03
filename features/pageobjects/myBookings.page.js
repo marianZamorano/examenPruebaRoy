@@ -8,6 +8,7 @@ class MyBookingsPage extends Page {
     get activeCount () { return $('#active-reservations-count') }
     get reservationLimit () { return $('#reservation-limit') }
     get rows () { return $$('.reservations-table tbody tr') }
+    get emptyMessage () { return $('#reservations-empty') }
 
     row (bookingCode) { return $(`tr[data-reservation-id="${bookingCode}"]`) }
     cell (bookingCode, column) { return $(`tr[data-reservation-id="${bookingCode}"] td[data-col="${column}"]`) }
