@@ -5,7 +5,7 @@ const RoomsPage = require('../pageobjects/rooms.page')
 const RoomDetailPage = require('../pageobjects/roomDetail.page')
 const BookingModal = require('../pageobjects/components/bookingModal')
 const MyBookingsPage = require('../pageobjects/myBookings.page')
-const { isoFromToday, addDaysToIso, toDisplayDate, formatBs } = require('../support/formatters')
+const { isoFromToday, addDaysToIso, toDisplayDate, formatBs, monthLabel } = require('../support/formatters')
 const { logToConsole, attachJson } = require('../support/inspector')
 
 const DB_KEY = 'hotel-qa:db'
@@ -47,7 +47,7 @@ async function bookRoom (world, room, nights, days) {
     await openRoom(world, room)
     await RoomDetailPage.openBookingModal()
     const { checkIn, checkOut } = chooseDates(world, days, nights)
-    await BookingModal.selectDates(checkIn, checkOut)
+    await BookingModal.calendar.selectDates(checkIn, checkOut)
     await BookingModal.fillRequired(ARRIVAL_TIME)
     await confirmBooking(world)
 }
@@ -66,11 +66,50 @@ Given('estoy en el detalle de la habitación {string}', async function (room) {
 
 When('abro el detalle de la habitación {string} desde el listado', async function (room) {
     await RoomsPage.openRoomDetail(room)
-    this.booking = { room }
+    // Conserva las fechas buscadas en el listado, si las hay
+    this.booking = { ...this.booking, room }
 })
 
 When('vuelvo al listado de habitaciones', async () => {
     await RoomDetailPage.backLink.click()
+})
+
+When('vuelvo al listado con {string}', async (option) => {
+    if (option === 'Volver a habitaciones') await RoomDetailPage.backLink.click()
+    else if (option === 'Atrás del navegador') await browser.back()
+    else throw new Error(`Opción no soportada: ${option}`)
+    await RoomsPage.firstRow.waitForDisplayed()
+})
+
+// ---------- Búsqueda por fechas y disponibilidad ----------
+
+When('busco habitaciones con check-in dentro de {int} días por {int} noche(s)', async function (days, nights) {
+    const checkIn = isoFromToday(days)
+    this.booking = { checkIn, checkOut: addDaysToIso(checkIn, nights), nights }
+    await RoomsPage.searchDates(this.booking.checkIn, this.booking.checkOut)
+})
+
+When('limpio las fechas de búsqueda', async () => {
+    await RoomsPage.btnClearDates.click()
+})
+
+Then('la habitación {string} debería figurar como {string} en el listado', async (room, availability) => {
+    await RoomsPage.showRoom(room)
+    await expect(RoomsPage.availability(room)).toHaveText(availability)
+})
+
+Then('el detalle debería indicar {string}', async (status) => {
+    await expect(RoomDetailPage.availability).toHaveText(status)
+})
+
+Then('el botón Reservar del detalle debería estar {string}', async (state) => {
+    if (state === 'habilitado') await expect(RoomDetailPage.btnBook).toBeEnabled()
+    else await expect(RoomDetailPage.btnBook).toBeDisabled()
+})
+
+Then('las fechas buscadas deberían conservarse', async function () {
+    await expect(RoomsPage.searchCheckIn).toHaveValue(toDisplayDate(this.booking.checkIn))
+    await expect(RoomsPage.searchCheckOut).toHaveValue(toDisplayDate(this.booking.checkOut))
 })
 
 Then('debería ver el listado con {string}', async (count) => {
@@ -99,18 +138,81 @@ When('abro el formulario de reserva', async () => {
     await RoomDetailPage.openBookingModal()
 })
 
+// Las dos formas de llegar al formulario: botón "Reservar" del detalle o de la fila del listado
+When('abro el formulario de reserva de la habitación {string} desde {string}', async function (room, origin) {
+    if (origin === 'el detalle') {
+        await RoomsPage.openRoomDetail(room)
+        await RoomDetailPage.openBookingModal()
+    } else if (origin === 'el listado') {
+        await RoomsPage.openBookingModal(room)
+    } else {
+        throw new Error(`Origen no soportado: ${origin}`)
+    }
+    this.booking = { ...this.booking, room }
+})
+
+When('elijo {int} huéspedes', async (guests) => {
+    await BookingModal.setField('Huéspedes', String(guests))
+})
+
+// ---------- Navegación del calendario ----------
+
+When('abro el calendario del formulario', async () => {
+    await BookingModal.calendar.open()
+})
+
+When('abro el calendario desde el campo check-in', async () => {
+    await BookingModal.calendar.inputCheckIn.click()
+})
+
+When('cierro el calendario con su botón', async () => {
+    await BookingModal.calendar.btnToggle.click()
+})
+
+When('avanzo un mes en el calendario', async () => {
+    await BookingModal.calendar.btnNextMonth.click()
+})
+
+When('retrocedo un mes en el calendario', async () => {
+    await BookingModal.calendar.btnPrevMonth.click()
+})
+
+When('avanzo hasta el último mes del calendario', async () => {
+    await BookingModal.calendar.goToLastMonth()
+})
+
+Then('el calendario debería mostrar el mes del día dentro de {int} días', async (days) => {
+    await expect(BookingModal.calendar.month).toHaveText(monthLabel(isoFromToday(days)))
+})
+
+Then('el calendario debería mostrar el mes siguiente al actual', async () => {
+    const [y, m] = isoFromToday(0).split('-').map(Number)
+    await expect(BookingModal.calendar.month).toHaveText(monthLabel(`${m === 12 ? y + 1 : y}-${String(m === 12 ? 1 : m + 1).padStart(2, '0')}-01`))
+})
+
+Then('el botón de mes {string} del calendario debería estar {string}', async (which, state) => {
+    const button = which === 'anterior' ? BookingModal.calendar.btnPrevMonth : BookingModal.calendar.btnNextMonth
+    if (state === 'habilitado') await expect(button).toBeEnabled()
+    else await expect(button).toBeDisabled()
+})
+
+Then('el calendario debería estar {string}', async (state) => {
+    if (state === 'abierto') await expect(BookingModal.calendar.container).toBeDisplayed()
+    else await expect(BookingModal.calendar.container).not.toBeExisting()
+})
+
 When('elijo un check-in dentro de {int} días por {int} noche(s)', async function (days, nights) {
     const { checkIn, checkOut } = chooseDates(this, days, nights)
-    await BookingModal.selectDates(checkIn, checkOut)
+    await BookingModal.calendar.selectDates(checkIn, checkOut)
 })
 
 When('elijo un check-in dentro de {int} días', async function (days) {
     this.booking = { ...this.booking, checkIn: isoFromToday(days) }
-    await BookingModal.selectDay(this.booking.checkIn)
+    await BookingModal.calendar.selectDay(this.booking.checkIn)
 })
 
 When('elijo en el calendario el día dentro de {int} días', async (days) => {
-    await BookingModal.selectDay(isoFromToday(days))
+    await BookingModal.calendar.selectDay(isoFromToday(days))
 })
 
 When('completo la hora de llegada y acepto la política de cancelación', async () => {
@@ -211,26 +313,26 @@ Then('el formulario de reserva debería estar vacío', async () => {
 })
 
 Then('el calendario debería indicar {string}', async (hint) => {
-    await expect(BookingModal.calendarHint).toHaveText(hint)
+    await expect(BookingModal.calendar.hint).toHaveText(hint)
 })
 
 Then('el calendario debería pedir el check-out para un check-in dentro de {int} días', async (days) => {
-    await expect(BookingModal.calendarHint).toHaveText(
+    await expect(BookingModal.calendar.hint).toHaveText(
         `Check-in ${toDisplayDate(isoFromToday(days))}. Elija el check-out (máx. 14 noches).`)
 })
 
 Then('el día dentro de {int} días debería estar {string} en el calendario', async (days, state) => {
-    expect(await BookingModal.isDayEnabled(isoFromToday(days))).toBe(state === 'habilitado')
+    expect(await BookingModal.calendar.isDayEnabled(isoFromToday(days))).toBe(state === 'habilitado')
 })
 
 Then('el check-out a {int} noche(s) debería estar {string}', async function (nights, state) {
-    expect(await BookingModal.isDayEnabled(addDaysToIso(this.booking.checkIn, nights))).toBe(state === 'habilitado')
+    expect(await BookingModal.calendar.isDayEnabled(addDaysToIso(this.booking.checkIn, nights))).toBe(state === 'habilitado')
 })
 
 Then('las noches reservadas deberían estar deshabilitadas en el calendario', async function () {
     const { checkIn, nights } = this.booking
     for (let i = 0; i < nights; i++) {
-        expect(await BookingModal.isDayEnabled(addDaysToIso(checkIn, i))).toBe(false)
+        expect(await BookingModal.calendar.isDayEnabled(addDaysToIso(checkIn, i))).toBe(false)
     }
 })
 
@@ -271,12 +373,17 @@ Then('debería ver el error de la reserva {string}', async (message) => {
     await expect(BookingModal.formError).toHaveText(message)
 })
 
+// Primero se espera la respuesta de la app (confirmación o error): sin esa
+// espera, la verificación podría pasar antes de que la reserva se guarde
 Then('la reserva no debería crearse', async function () {
-    await expect(BookingModal.modal).toBeDisplayed()
-    await expect(RoomDetailPage.toast).not.toBeDisplayed()
+    await browser.waitUntil(async () => (await RoomDetailPage.toast.isDisplayed()) || (await BookingModal.formError.isDisplayed()),
+        { timeoutMsg: 'La aplicación no respondió al confirmar la reserva' })
     const reservations = await myReservations()
     await logToConsole('Reservas del usuario antes / después de confirmar', { antes: this.reservationsBefore, despues: reservations.length })
+    await attachJson('Reservas del usuario después de confirmar', reservations)
     expect(reservations.length).toBe(this.reservationsBefore)
+    await expect(RoomDetailPage.toast).not.toBeDisplayed()
+    await expect(BookingModal.modal).toBeDisplayed()
 })
 
 Then('debería existir una sola reserva con las fechas elegidas', async function () {
@@ -323,9 +430,50 @@ When('solicito a la aplicación una reserva de {string} con check-in dentro de {
         await requestReservation(this, room, days, nights, { total, rate: total })
     })
 
+When('solicito a la aplicación una reserva de {string} con check-in dentro de {int} días por {int} noche(s) a nombre del usuario {string}',
+    async function (room, days, nights, username) {
+        const userId = await browser.execute((dbKey, name) =>
+            JSON.parse(localStorage.getItem(dbKey)).users.find((u) => u.username === name).id, DB_KEY, username)
+        await requestReservation(this, room, days, nights, { userId })
+    })
+
+// Acción sobre una reserva activa de otro usuario (se busca por usuario, no por un código fijo)
+When('solicito a la aplicación {string} una reserva activa de {string}', async function (action, username) {
+    this.foreignReservation = await browser.execute((dbKey, name) => {
+        const db = JSON.parse(localStorage.getItem(dbKey))
+        const owner = db.users.find((u) => u.username === name)
+        return db.reservations.find((r) => r.userId === owner.id && !r.cancelledAt && !r.noShow)
+    }, DB_KEY, username)
+    const checkIn = isoFromToday(60)
+    this.apiResult = await browser.execute((act, id, dates) => act === 'cancelar'
+        ? window.__hotelApi.cancelReservation(id)
+        : window.__hotelApi.modifyReservation(id, dates), action, this.foreignReservation.id, { checkIn, checkOut: addDaysToIso(checkIn, 2) })
+    await logToConsole(`window.__hotelApi: ${action} ${this.foreignReservation.id} (de ${username})`, this.apiResult)
+})
+
 Then('la aplicación debería rechazarla con {string}', function (message) {
     expect(this.apiResult.ok).toBe(false)
     expect(this.apiResult.message).toBe(message)
+})
+
+Then('la aplicación debería rechazar la reserva', async function () {
+    await attachJson('Respuesta de la aplicación', this.apiResult)
+    expect(this.apiResult.ok).toBe(false)
+})
+
+Then('la reserva guardada debería pertenecer al usuario {string}', async function (username) {
+    expect(this.apiResult.ok).toBe(true)
+    const owner = await browser.execute((dbKey, name) =>
+        JSON.parse(localStorage.getItem(dbKey)).users.find((u) => u.username === name).id, DB_KEY, username)
+    await attachJson('Reserva guardada', this.apiResult.data)
+    expect(this.apiResult.data.userId).toBe(owner)
+})
+
+Then('la reserva de {string} no debería cambiar', async function (_username) {
+    const current = await browser.execute((dbKey, id) =>
+        JSON.parse(localStorage.getItem(dbKey)).reservations.find((r) => r.id === id), DB_KEY, this.foreignReservation.id)
+    await attachJson('Reserva ajena antes / después', { antes: this.foreignReservation, despues: current })
+    expect(current).toEqual(this.foreignReservation)
 })
 
 Then('la reserva guardada debería tener un total de {string}', async function (total) {
