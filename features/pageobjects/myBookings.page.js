@@ -4,14 +4,22 @@ const Page = require('./page')
 * Mis reservas (/mis-reservas)
 */
 class MyBookingsPage extends Page {
-    // TODO: getters de selectores (tabla, fila por código, botones "Modificar fechas" y "Cancelar", estado)
+    get activeSummary () { return $('.page-head .muted') }
+    get activeCount () { return $('#active-reservations-count') }
+    get reservationLimit () { return $('#reservation-limit') }
+    get rows () { return $$('.reservations-table tbody tr') }
+
+    row (bookingCode) { return $(`tr[data-reservation-id="${bookingCode}"]`) }
+    cell (bookingCode, column) { return $(`tr[data-reservation-id="${bookingCode}"] td[data-col="${column}"]`) }
+    btnModify (bookingCode) { return $(`button[name="modify-${bookingCode}"]`) }
+    btnCancel (bookingCode) { return $(`button[name="cancel-${bookingCode}"]`) }
 
     async modifyDates (bookingCode, checkIn, checkOut) {
-        // TODO
+        // TODO (inciso 4)
     }
 
     async cancelBooking (bookingCode) {
-        // TODO
+        // TODO (inciso 4)
     }
 
     open () {
