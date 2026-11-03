@@ -17,9 +17,12 @@ paso donde la aplicación no cumple lo esperado.
 
 ```bash
 npm run clean             # borra resultados anteriores (el historial se conserva)
-npm run test:evidencias   # escenarios @bug con DevTools abierto; regenera docs/evidencias/
+npm test                  # ejecuta todos los escenarios, incluidos los que detectaron defectos
 npm run report            # reporte de Allure con historial de ejecuciones
 ```
+
+Para regenerar la evidencia con DevTools de `docs/evidencias/` se usa `npm run test:evidencias`,
+que ejecuta solo los escenarios `@bug`.
 
 Sin intervención manual, la suite registra:
 
