@@ -33,4 +33,16 @@ Then('la reserva debería permitir modificar fechas y cancelar', async function 
     await expect(MyBookingsPage.btnCancel(this.booking.code)).toBeEnabled()
 })
 
+Then('no debería tener reservas en Mis reservas', async () => {
+    await expect(MyBookingsPage.emptyMessage).toHaveText('No hay reservas para mostrar.')
+    await expect(MyBookingsPage.rows).toBeElementsArrayOfSize(0)
+})
+
+// La reserva del usuario nuevo se identifica por el código de su confirmación
+Then('no debería ver la reserva del usuario nuevo en Mis reservas', async function () {
+    await expect(MyBookingsPage.activeSummary).toBeDisplayed()
+    await attachJson('Reservas visibles', await MyBookingsPage.rows.map((row) => row.getText()))
+    await expect(MyBookingsPage.row(this.booking.code)).not.toBeExisting()
+})
+
 // TODO: steps de modificar fechas y cancelar (inciso 4)

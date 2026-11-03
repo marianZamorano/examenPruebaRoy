@@ -483,6 +483,46 @@ Then('la reserva guardada debería tener un total de {string}', async function (
     expect(formatBs(saved.total)).toBe(total)
 })
 
+// ---------- Reservas de otros usuarios ----------
+
+// Primera reserva activa (no cancelada ni finalizada) de un usuario existente
+Given('estoy en el detalle de la habitación reservada por {string}', async function (username) {
+    const today = isoFromToday(0)
+    this.otherReservation = await browser.execute((dbKey, name, from) => {
+        const db = JSON.parse(localStorage.getItem(dbKey))
+        const owner = db.users.find((u) => u.username === name)
+        return db.reservations.find((r) => r.userId === owner.id && !r.cancelledAt && !r.noShow && r.checkIn > from)
+    }, DB_KEY, username, today)
+    await attachJson(`Reserva activa de ${username}`, this.otherReservation)
+    await openRoom(this, this.otherReservation.roomId)
+})
+
+Then('las noches reservadas por {string} deberían estar deshabilitadas en el calendario', async function (_username) {
+    const { checkIn, checkOut } = this.otherReservation
+    for (let day = checkIn; day < checkOut; day = addDaysToIso(day, 1)) {
+        expect(await BookingModal.calendar.isDayEnabled(day)).toBe(false)
+    }
+})
+
+When('solicito a la aplicación una reserva en las fechas reservadas por {string}', async function (_username) {
+    const { roomId, checkIn, checkOut } = this.otherReservation
+    this.apiResult = await browser.execute(async (data, dbKey, sessionKey) => {
+        const user = JSON.parse(localStorage.getItem(dbKey)).users.find((u) => u.id === localStorage.getItem(sessionKey))
+        return window.__hotelApi.createReservation({ guestName: user.fullName, guestEmail: user.email, ...data })
+    }, { roomId, checkIn, checkOut, guests: 1, arrivalTime: ARRIVAL_TIME, specialRequests: '', acceptPolicy: true }, DB_KEY, SESSION_KEY)
+    await logToConsole('window.__hotelApi.createReservation(fechas de otro usuario)', this.apiResult)
+})
+
+When('consulto a la aplicación mis reservas', async function () {
+    this.apiResult = await browser.execute(() => window.__hotelApi.listMyReservations())
+    await attachJson('window.__hotelApi.listMyReservations()', this.apiResult)
+})
+
+Then('la aplicación no debería devolver reservas', function () {
+    const list = Array.isArray(this.apiResult) ? this.apiResult : this.apiResult.data
+    expect(list).toEqual([])
+})
+
 // ---------- Accesibilidad ----------
 
 Then('el foco debería estar dentro del formulario de reserva', async () => {
