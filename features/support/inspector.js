@@ -38,11 +38,36 @@ function issueId (pickle = currentScenario) {
 // Carpeta de evidencia del escenario: docs/evidencias/<ID>/. Si el escenario es
 // un ejemplo de un Scenario Outline, cada ejemplo tiene su subcarpeta (por el
 // texto entre paréntesis del nombre) para que no se pisen las capturas.
+// Si un mismo defecto lo reproducen varios escenarios (por ejemplo, uno del
+// inciso 1 y otro del inciso 3), cada escenario va en su propia subcarpeta.
 function evidenceDir (pickle = currentScenario) {
     const id = issueId(pickle)
     if (!id) return null
     const example = pickle.astNodeIds.length > 1 && pickle.name.match(/\(([^()]+)\)\s*$/)
-    return example ? path.join(EVIDENCE_DIR, id, slug(example[1])) : path.join(EVIDENCE_DIR, id)
+    const scenarioName = example ? pickle.name.slice(0, example.index).trim() : pickle.name
+    let dir = path.join(EVIDENCE_DIR, id)
+    if (scenariosPerIssue()[id] > 1) dir = path.join(dir, slug(scenarioName))
+    return example ? path.join(dir, slug(example[1])) : dir
+}
+
+// Cantidad de escenarios (no de ejemplos) etiquetados con cada @issue en los .feature
+let issueCounts = null
+function scenariosPerIssue () {
+    if (issueCounts) return issueCounts
+    issueCounts = {}
+    const featuresDir = path.join(__dirname, '..')
+    for (const file of fs.readdirSync(featuresDir).filter((f) => f.endsWith('.feature'))) {
+        let pendingId = null
+        for (const line of fs.readFileSync(path.join(featuresDir, file), 'utf8').split(/\r?\n/)) {
+            const tag = line.match(/@issue=([\w-]+)/)
+            if (tag) pendingId = tag[1]
+            if (/^\s*Scenario(?: Outline)?:/.test(line)) {
+                if (pendingId) issueCounts[pendingId] = (issueCounts[pendingId] || 0) + 1
+                pendingId = null
+            }
+        }
+    }
+    return issueCounts
 }
 
 function slug (text) {

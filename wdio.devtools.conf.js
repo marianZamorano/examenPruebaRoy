@@ -38,70 +38,33 @@ const DEVTOOLS_PREFERENCES = {
 // del archivo de video (el reporter de video elimina tildes, ñ y caracteres especiales)
 const normalize = (text) => text.replace(/[^A-Za-z0-9]/g, '').toLowerCase()
 
-// Relación "nombre del escenario → ID del defecto" a partir de los tags @issue.
-// En los Scenario Outline el nombre termina en "(<columna>)": se guarda el
-// prefijo y el ejemplo se identifica por lo que sigue a ese prefijo.
-function scenariosByIssue () {
-    const exact = {}
-    const outlines = []
-    const featuresDir = path.join(__dirname, 'features')
-    for (const file of fs.readdirSync(featuresDir).filter((f) => f.endsWith('.feature'))) {
-        let pendingId = null
-        for (const line of fs.readFileSync(path.join(featuresDir, file), 'utf8').split(/\r?\n/)) {
-            const tag = line.match(/@issue=([\w-]+)/)
-            if (tag) pendingId = tag[1]
-            const scenario = line.match(/^\s*Scenario(?: Outline)?:\s*(.+)$/)
-            if (scenario) {
-                const outline = scenario[1].match(/^(.*)\(<[^>]+>\)\s*$/)
-                if (pendingId && outline) outlines.push({ prefix: normalize(outline[1]), id: pendingId })
-                else if (pendingId) exact[normalize(scenario[1])] = pendingId
-                pendingId = null
-            }
-        }
-    }
-    return { exact, outlines }
-}
-
-// Carpeta de evidencia que corresponde a un video: docs/evidencias/<ID>/ o,
-// para un ejemplo de Scenario Outline, docs/evidencias/<ID>/<ejemplo>/
-function videoTarget ({ exact, outlines }, scenarioPart) {
-    if (exact[scenarioPart]) return path.join(EVIDENCE_DIR, exact[scenarioPart])
-    const outline = outlines.find((o) => scenarioPart.startsWith(o.prefix))
-    if (!outline) return null
-    // Se compara con el nombre original del escenario (resultado.json), normalizado
-    // igual que el video: el nombre de la carpeta no sirve porque convierte las
-    // tildes ("Atras") y el reporter de video las elimina ("Atrs")
-    const idDir = path.join(EVIDENCE_DIR, outline.id)
-    const sub = fs.existsSync(idDir) && fs.readdirSync(idDir).find((d) => {
-        const result = path.join(idDir, d, 'resultado.json')
-        return fs.existsSync(result) && normalize(JSON.parse(fs.readFileSync(result, 'utf8')).escenario) === scenarioPart
-    })
-    return sub ? path.join(idDir, sub) : null
-}
-
-// Mueve cada video a la carpeta de su defecto (o de su ejemplo) como video.webm
-function organizeVideos () {
-    if (!fs.existsSync(VIDEO_TMP_DIR)) return
-    const scenarios = scenariosByIssue()
-    for (const file of fs.readdirSync(VIDEO_TMP_DIR).filter((f) => f.endsWith('.webm'))) {
-        const target = videoTarget(scenarios, normalize(file.split(/-\d+-\d+--/)[0]))
-        if (target) {
-            fs.mkdirSync(target, { recursive: true })
-            fs.copyFileSync(path.join(VIDEO_TMP_DIR, file), path.join(target, 'video.webm'))
-        }
-    }
-}
-
-// Carpetas con resultado.json: <ID> o <ID>/<ejemplo> (rutas relativas a EVIDENCE_DIR)
-function evidenceFolders () {
+// Carpetas de evidencia con resultado.json, a cualquier profundidad: <ID>,
+// <ID>/<ejemplo>, <ID>/<escenario> o <ID>/<escenario>/<ejemplo> (rutas relativas)
+function evidenceFolders (dir = EVIDENCE_DIR, prefix = '') {
     const folders = []
-    for (const id of fs.readdirSync(EVIDENCE_DIR, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name).sort()) {
-        if (fs.existsSync(path.join(EVIDENCE_DIR, id, 'resultado.json'))) folders.push(id)
-        for (const sub of fs.readdirSync(path.join(EVIDENCE_DIR, id), { withFileTypes: true }).filter((d) => d.isDirectory() && d.name !== 'pasos').map((d) => d.name).sort()) {
-            if (fs.existsSync(path.join(EVIDENCE_DIR, id, sub, 'resultado.json'))) folders.push(`${id}/${sub}`)
-        }
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true }).filter((d) => d.isDirectory() && d.name !== 'pasos').map((d) => d.name).sort()) {
+        const relative = prefix ? `${prefix}/${entry}` : entry
+        if (fs.existsSync(path.join(dir, entry, 'resultado.json'))) folders.push(relative)
+        folders.push(...evidenceFolders(path.join(dir, entry), relative))
     }
     return folders
+}
+
+// Mueve cada video a la carpeta de su escenario como video.webm. Se compara con el
+// nombre original del escenario (resultado.json), normalizado igual que el video:
+// el nombre de la carpeta no sirve porque convierte las tildes ("Atras") y el
+// reporter de video las elimina ("Atrs")
+function organizeVideos () {
+    if (!fs.existsSync(VIDEO_TMP_DIR)) return
+    const folders = evidenceFolders().map((folder) => ({
+        dir: path.join(EVIDENCE_DIR, folder),
+        name: normalize(JSON.parse(fs.readFileSync(path.join(EVIDENCE_DIR, folder, 'resultado.json'), 'utf8')).escenario)
+    }))
+    for (const file of fs.readdirSync(VIDEO_TMP_DIR).filter((f) => f.endsWith('.webm'))) {
+        const videoName = normalize(file.split(/-\d+-\d+--/)[0])
+        const target = folders.find((f) => f.name === videoName)
+        if (target) fs.copyFileSync(path.join(VIDEO_TMP_DIR, file), path.join(target.dir, 'video.webm'))
+    }
 }
 
 // Índice de la última ejecución, generado a partir de los resultados reales
@@ -126,9 +89,10 @@ function writeIndex () {
         `**Fecha de ejecución:** ${fecha}`,
         '',
         'Cada carpeta contiene la captura con DevTools de cada paso (`pasos/`), el video del escenario',
-        '(`video.webm`) y el resultado (`resultado.json`). Si el escenario tiene varios ejemplos',
-        '(Scenario Outline), cada ejemplo tiene su propia subcarpeta. El historial de ejecuciones',
-        'anteriores está en el reporte de Allure (`npm run report`, gráficos *Trend* y pestaña *History*).',
+        '(`video.webm`) y el resultado (`resultado.json`). Si varios escenarios reproducen el mismo',
+        'defecto, o el escenario tiene varios ejemplos (Scenario Outline), cada uno tiene su propia',
+        'subcarpeta. El historial de ejecuciones anteriores está en el reporte de Allure',
+        '(`npm run report`, gráficos *Trend* y pestaña *History*).',
         '',
         '| ID | Escenario | Resultado | Pasos capturados | Fallo | Video |',
         '|---|---|---|---|---|---|',
