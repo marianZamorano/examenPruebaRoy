@@ -15,6 +15,7 @@
     "clean": "node -e \"['allure-results','allure-report','videos'].forEach(d => require('fs').rmSync(d, { recursive: true, force: true }))\"",
     "test": "wdio run ./wdio.conf.js",
     "wdio": "wdio run ./wdio.conf.js",
+    "test:regresion": "wdio run ./wdio.conf.js --cucumberOpts.tags=\"not @bug\"",
     "test:bugs": "wdio run ./wdio.conf.js --cucumberOpts.tags=@bug",
     "test:evidencias": "wdio run ./wdio.devtools.conf.js",
     "allure:generate": "node scripts/allure-report.js",
