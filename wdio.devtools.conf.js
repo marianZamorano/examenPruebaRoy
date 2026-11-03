@@ -68,9 +68,14 @@ function videoTarget ({ exact, outlines }, scenarioPart) {
     if (exact[scenarioPart]) return path.join(EVIDENCE_DIR, exact[scenarioPart])
     const outline = outlines.find((o) => scenarioPart.startsWith(o.prefix))
     if (!outline) return null
-    const example = scenarioPart.slice(outline.prefix.length)
+    // Se compara con el nombre original del escenario (resultado.json), normalizado
+    // igual que el video: el nombre de la carpeta no sirve porque convierte las
+    // tildes ("Atras") y el reporter de video las elimina ("Atrs")
     const idDir = path.join(EVIDENCE_DIR, outline.id)
-    const sub = fs.existsSync(idDir) && fs.readdirSync(idDir).find((d) => normalize(d) === example)
+    const sub = fs.existsSync(idDir) && fs.readdirSync(idDir).find((d) => {
+        const result = path.join(idDir, d, 'resultado.json')
+        return fs.existsSync(result) && normalize(JSON.parse(fs.readFileSync(result, 'utf8')).escenario) === scenarioPart
+    })
     return sub ? path.join(idDir, sub) : null
 }
 
