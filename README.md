@@ -48,6 +48,7 @@ defectos encontrados (en rojo, con su ID, severidad, capturas, video y diagnóst
 | `npm run test:bugs` | Ejecuta **solo** los escenarios `@bug` | Todos fallan mientras el defecto exista |
 | `npm run test:evidencias` | Igual que `test:bugs`, pero con DevTools abierto. Regenera `docs/evidencias/` | Igual que `test:bugs` |
 | `npm run report` | Genera el reporte de Allure con el historial de ejecuciones y lo abre en el navegador (se cierra con `Ctrl+C`) | — |
+| `npm run allure:open` | Vuelve a abrir el último reporte generado, sin regenerarlo ni sumar una ejecución al historial | — |
 
 `npm test` termina con error (en rojo) mientras existan defectos: refleja el estado real de la
 aplicación. Para saber si algo **nuevo** se rompió, se usa `npm run test:regresion`, que debe estar
@@ -85,7 +86,45 @@ Con `npm run test:evidencias`, además:
 npx wdio run ./wdio.conf.js --spec ./features/01_login.feature     # un solo feature
 npx wdio run ./wdio.conf.js --cucumberOpts.tags="@smoke"           # escenarios con un tag
 npx wdio run ./wdio.conf.js --cucumberOpts.tags="@issue=BUG-001"   # un solo defecto
+npx wdio run ./wdio.conf.js --cucumberOpts.tags="@security and not @bug"   # combinación de tags
 ```
+
+## Tags
+
+Los escenarios se clasifican con tags de Cucumber. Sirven para **filtrar qué se ejecuta** (con
+`--cucumberOpts.tags`) y algunos, además, **se muestran en Allure**.
+
+### Tipo de prueba
+
+| Tag | Significado |
+|---|---|
+| `@smoke` | Prueba básica del flujo principal: si falla, lo demás no tiene sentido. Es lo primero que se ejecuta para validar que la aplicación funciona |
+| `@negative` | Caso negativo: datos inválidos o situaciones que la aplicación debe rechazar con el mensaje correcto |
+| `@security` | Seguridad: credenciales, sesión, control de acceso, inyección de código |
+| `@cache` | Caché y almacenamiento del navegador (lo que se revisa en DevTools → *Application* y *Network*) |
+| `@accessibility` | Accesibilidad: que la aplicación se pueda usar con lectores de pantalla y teclado |
+
+Un escenario puede tener varios tags. Por ejemplo, `@security @cache` es una prueba de seguridad
+relacionada con la caché.
+
+### Estado de un defecto
+
+Solo los llevan los escenarios cuyo comportamiento esperado la aplicación **no cumple actualmente**:
+
+| Tag | Significado | En Allure |
+|---|---|---|
+| `@bug` | El escenario detectó un defecto que ya está reportado. Falla mientras el defecto exista; cuando se corrige, se quita el tag | — |
+| `@issue=<ID>` | ID del defecto en [`docs/REPORTE_DEFECTOS.md`](docs/REPORTE_DEFECTOS.md) (por ejemplo `@issue=BUG-001`) | Se muestra como enlace del escenario |
+| `@severity=<nivel>` | Severidad del defecto | Se muestra como severidad del escenario y en el gráfico de severidades |
+
+Equivalencia entre la severidad del reporte de defectos y el nivel de Allure:
+
+| Severidad en el reporte | `@severity=` en Allure |
+|---|---|
+| Crítica | `blocker` |
+| Alta | `critical` |
+| Media | `normal` |
+| Baja | `minor` |
 
 ## Estructura
 
