@@ -13,6 +13,7 @@ class RoomDetailPage extends Page {
     get view () { return $('.room-detail__view') }
     get amenities () { return $$('.room-detail__amenities li') }
     get bookedDates () { return $('.room-detail__booked') }
+    get availability () { return $('.room-detail__status') }
     get backLink () { return $('.back-link') }
     get btnBook () { return $('.room-detail__book-btn') }
 

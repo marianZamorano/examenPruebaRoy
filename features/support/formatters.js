@@ -31,4 +31,11 @@ function formatBs (amount) {
     return `Bs ${String(amount).replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`
 }
 
-module.exports = { isoFromToday, addDaysToIso, toDisplayDate, formatBs }
+// Mes de una fecha ISO como lo muestra el calendario: "Noviembre de 2026"
+function monthLabel (iso) {
+    const [y, m] = iso.split('-').map(Number)
+    const label = new Date(y, m - 1, 1).toLocaleDateString('es', { month: 'long', year: 'numeric' })
+    return label.charAt(0).toUpperCase() + label.slice(1)
+}
+
+module.exports = { isoFromToday, addDaysToIso, toDisplayDate, formatBs, monthLabel }
