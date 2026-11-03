@@ -25,6 +25,9 @@ Resolución del examen de automatización sobre [Hotel QA](https://hotel-qa-f51.
 npm install
 ```
 
+El proyecto no versiona `package-lock.json` (`.npmrc` con `package-lock=false`): las versiones se
+resuelven a partir de los rangos de `package.json`.
+
 ## Cómo ejecutar las pruebas
 
 ### Orden recomendado
@@ -153,7 +156,8 @@ features/
 │   ├── booking.steps.js
 │   └── myBookings.steps.js
 └── support/
-    └── inspector.js                        # lectura del navegador, capturas y adjuntos de Allure
+    ├── inspector.js                        # lectura del navegador, capturas y adjuntos de Allure
+    └── formatters.js                       # fechas relativas a hoy y montos en Bs
 docs/
 ├── REPORTE_DEFECTOS.md                     # defectos con severidad y prioridad
 └── evidencias/                             # evidencia de la última ejecución (generada)
@@ -257,7 +261,90 @@ verde significa "todo lo que debe funcionar, funciona", y un fallo significa "al
 
 ## Inciso 2: Reserva de 6 noches
 
-*Pendiente.*
+**Feature:** [`features/02_reserva_6_noches.feature`](features/02_reserva_6_noches.feature)
+
+> Feature que contenga las funcionalidades de ingresar a la página, ver detalle de una habitación y
+> realizar la reserva de la habitación (6 noches).
+
+### Análisis previo
+
+El flujo se exploró con WebdriverIO y con **todos los usuarios de prueba** antes de escribir los
+escenarios. Todos los mensajes esperados del feature son los que muestra la aplicación real.
+
+**Flujo:** Habitaciones (24, en 3 páginas) → "Ver detalle" → `/habitaciones/H105` → botón
+"Reservar" → formulario (modal) → *"Reserva R0008 confirmada."* → las fechas pasan a "Fechas
+ocupadas" → Mis reservas.
+
+**Reglas de la reserva encontradas:**
+
+| Regla | Comportamiento |
+|---|---|
+| Noches | De 1 a 14. En el calendario, los check-out fuera de ese rango están deshabilitados |
+| Fechas | Check-in desde mañana hasta dentro de 180 días. Las fechas ya reservadas están deshabilitadas y un rango no puede cruzarlas |
+| Campos | "Confirmar reserva" se habilita al elegir las fechas; al confirmar se validan la hora de llegada, la política de cancelación, el titular (mín. 3 caracteres), el correo (dominio `.test`) y las solicitudes especiales (máx. 200) |
+| Huéspedes | De 1 a la capacidad de la habitación |
+| Total | Tarifa × noches, con formato `Bs 2.100`. La aplicación lo recalcula aunque se le envíe otro valor |
+| Límite de reservas activas | Depende del **tipo de usuario**. Las canceladas, finalizadas y no presentadas no cuentan |
+| No-show | Una reserva no presentada en los últimos 30 días impide reservar |
+
+**Comportamiento con cada usuario de prueba:**
+
+| Usuario | Tipo | Reservas activas | Al reservar |
+|---|---|---|---|
+| `lvargas` | Huésped | 1 de 2 | Reserva una más; la siguiente se rechaza por el límite |
+| `rmamani` | Huésped | 2 de 2 | Se rechaza: *"Alcanzó el límite de 2 reservas activas para Huésped."* |
+| `sflores` | Frecuente | 0 de 4 | Se rechaza: *"Tiene una reserva no presentada en los últimos 30 días. No puede reservar por ahora."* |
+| `dchoque` | Corporativo | 1 de 6 | Reserva hasta 6; la séptima se rechaza |
+| `admin` | Corporativo | 0 de 6 | Reserva hasta 6; la séptima se rechaza |
+| `ptorrez` | Bloqueado | — | No puede iniciar sesión, así que no llega al formulario |
+
+### Diseño de las pruebas
+
+Igual que en el inciso 1, los escenarios describen lo que la reserva **debería** hacer y están
+organizados por funcionalidad:
+
+| Grupo | Qué se prueba |
+|---|---|
+| **Ingreso y detalle de la habitación** (`@smoke`) | Listado después del login. Detalle desde "Ver detalle" de 3 habitaciones (una en la página 3 del listado): tipo, capacidad, tarifa, piso, vista y servicios. Volver al listado. El formulario muestra la habitación, la tarifa y las reglas. Titular y correo precargados para los 5 usuarios activos |
+| **Reserva de 6 noches** (`@smoke`) | Reserva de 6 noches con `lvargas`, `dchoque` y `admin`: resumen (6 noches, Bs 2.100), confirmación, cierre del formulario y fechas ocupadas en el detalle. **En Mis reservas:** código, habitación, check-in, check-out, noches, huéspedes, total, modificaciones 0/1, estado "Confirmada", acciones disponibles y contador de reservas activas. La reserva persiste al recargar y varios clics seguidos crean una sola |
+| **Rango de noches** | Se puede elegir 1 y 14 noches, pero no 15. El mismo día como check-out no crea una estadía de 0 noches. No se puede elegir un check-out anterior al check-in |
+| **Fechas permitidas** | Ayer y hoy deshabilitados, mañana habilitado, día 180 habilitado y día 181 deshabilitado. Las fechas reservadas se bloquean y una estadía no puede cruzarlas |
+| **Campos obligatorios y validaciones** (`@negative`) | Hora de llegada, política de cancelación, titular (vacío, 2 caracteres, solo espacios, con números), correo (vacío, dominio real, sin arroba), solicitudes especiales (200 sí, 201 no). Huéspedes según la capacidad. Cancelar y Escape cierran sin reservar |
+| **Cálculo del total** | Tarifa × noches para 1, 6 y 14 noches (Bs 180, Bs 2.100, Bs 16.800), en el formulario y en Mis reservas |
+| **Reglas fuera del formulario** (`@security`) | Se envían a la lógica de la aplicación (`window.__hotelApi`) datos que el calendario no permite elegir: 0 y 15 noches, check-in hoy o después de 180 días, más huéspedes que la capacidad, fechas ocupadas y un total manipulado. Verifica que las reglas no dependan solo de la interfaz |
+| **Límite de reservas activas** | Contador "Reservas activas: X de N" de los 5 usuarios activos. El límite de cada tipo de usuario: Huésped 2 (`lvargas`, `rmamani`), Corporativo 6 (`dchoque`, `admin`). El no-show de `sflores`. El usuario bloqueado `ptorrez`. Aviso al abrir el formulario cuando el usuario no puede reservar |
+| **Accesibilidad** (`@accessibility`) | El foco pasa al formulario al abrirlo. Los errores se marcan de forma accesible |
+
+### Decisiones técnicas
+
+- **Fechas relativas a hoy**: los escenarios dicen "dentro de 30 días" y [`features/support/formatters.js`](features/support/formatters.js) calcula la fecha, el formato `dd/mm/aaaa` y el monto `Bs 2.100`. Las pruebas funcionan cualquier día.
+- **Calendario en el page object**: [`bookingModal.js`](features/pageobjects/components/bookingModal.js) navega por los meses hasta el día pedido (atributo `data-date`). Los steps solo dicen qué fecha elegir.
+- **Listado paginado**: `RoomsPage.openRoomDetail` avanza de página hasta encontrar la habitación, como lo haría un usuario.
+- **La reserva se identifica por su código**: se toma del mensaje de confirmación y se usa para encontrar la fila en Mis reservas.
+- **"La reserva no debería crearse"** no solo revisa la pantalla: compara la cantidad de reservas del usuario en el almacenamiento antes y después de confirmar.
+- **Precondiciones desde la interfaz**: "completé mis reservas activas hasta el límite" lee el límite en Mis reservas y crea las reservas necesarias con el formulario, sin modificar datos a mano.
+- **Esperas explícitas**: los mensajes de validación tardan cerca de un segundo; las verificaciones usan las esperas de `expect` de WebdriverIO, no pausas fijas.
+- **Steps reutilizados del inciso 1**: inicio de sesión, menú, recarga, rutas y mensajes de error del login.
+
+### Defectos encontrados
+
+Al ejecutar las pruebas, 4 escenarios no se cumplieron. Se documentaron en
+[`docs/REPORTE_DEFECTOS.md`](docs/REPORTE_DEFECTOS.md):
+
+| ID | Defecto | Severidad |
+|---|---|---|
+| DEF-013 | Quien no puede reservar (límite o no-show) se entera recién al confirmar | Baja |
+| DEF-014 | El nombre del titular acepta números | Baja |
+| DEF-011 | El foco no pasa al formulario de reserva al abrirlo | Baja |
+| DEF-012 | El formulario de reserva no marca de forma accesible los errores | Baja |
+
+Las reglas de negocio principales (noches, fechas, campos, total y límite) **se cumplen**, también
+fuera de la interfaz. Los defectos son de usabilidad, validación de datos y accesibilidad.
+
+Durante el análisis, varios fallos resultaron ser **errores de la prueba** y se corrigieron sin
+reportarlos: la tabla de habitaciones aún no se había dibujado después del login, el formulario
+abierto tapaba el menú y un escenario suponía que se podía elegir un check-out anterior al check-in
+(el calendario lo deshabilita, que es lo correcto).
 
 ## Inciso 3: Registro y reserva de 2 noches
 
