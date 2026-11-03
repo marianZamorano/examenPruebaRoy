@@ -158,7 +158,8 @@ features/
 │   └── myBookings.steps.js
 └── support/
     ├── inspector.js                        # lectura del navegador, capturas y adjuntos de Allure
-    └── formatters.js                       # fechas relativas a hoy y montos en Bs
+    ├── formatters.js                       # fechas relativas a hoy y montos en Bs
+    └── userData.js                         # datos únicos para registrar usuarios nuevos
 docs/
 ├── REPORTE_DEFECTOS.md                     # defectos con severidad y prioridad
 └── evidencias/                             # evidencia de la última ejecución (generada)
@@ -371,7 +372,100 @@ paso espera la respuesta de la app (confirmación o error) antes de verificar.
 
 ## Inciso 3: Registro y reserva de 2 noches
 
-*Pendiente.*
+**Feature:** [`features/03_registro_y_reserva_2_noches.feature`](features/03_registro_y_reserva_2_noches.feature)
+
+> Feature que contenga las funcionalidades de registrar un usuario nuevo, ver detalle de una
+> habitación y realizar la reserva (2 noches).
+
+### Alcance: sin duplicar otros incisos
+
+Antes de diseñar se revisó lo que ya cubren `01_login.feature`, `02_reserva_6_noches.feature` y el
+reporte de defectos. El inciso 3 prueba **solo lo que depende del registro o de ser un usuario
+recién creado**:
+
+| No se repite | Porque ya lo cubre |
+|---|---|
+| Login: credenciales, mayúsculas en el usuario, contraseña sin recortar, bloqueados, intentos fallidos; sesión, logout, pestañas, caché | Inciso 1 |
+| Detalle de habitación, disponibilidad, calendario y reglas del formulario de reserva (noches, fechas, campos, cálculo general del total, huéspedes); límites y no-show de los usuarios sembrados | Inciso 2 |
+| Modificar fechas y cancelar reservas | Inciso 4 |
+
+Cuando un escenario del inciso 3 reproduce un defecto ya reportado, usa su **mismo ID** (DEF-003,
+DEF-010, DEF-014) y la ficha del reporte lo agrega como escenario adicional.
+
+### Análisis previo
+
+Se exploró con WebdriverIO el flujo login → "Regístrese" → registro → primer ingreso →
+habitaciones → detalle → reserva de 2 noches → Mis reservas, lo que guarda la app en el
+almacenamiento y lo que permite su API interna (`window.__hotelApi` no tiene una función de
+registro: el registro solo se puede probar desde la interfaz).
+
+| Elemento | Comportamiento encontrado |
+|---|---|
+| Campos | Nombre (mín. 3, **sin máximo**), correo (dominio `.test`), usuario (4 a 20 alfanuméricos), contraseña (mín. 8, una mayúscula y un número), confirmación, tipo de usuario (**Huésped, Frecuente o Corporativo, a elección**) y términos |
+| Mensajes | Uno por campo y *"Revise los campos marcados."*; duplicados: *"El usuario ya existe."* / *"El correo ya está registrado."* |
+| Éxito | *"Cuenta creada para `<usuario>`. Inicie sesión."*, lleva al login y **no inicia sesión automáticamente** |
+| Datos guardados | Id nuevo (`U007`, `U008`…), rol `huesped`, estado `activo`, el tipo elegido, nombre y correo sin espacios alrededor y la contraseña **legible** |
+| Usuario nuevo | Su límite de reservas activas depende del tipo elegido (2, 4 o 6) y empieza sin reservas |
+
+### Usuarios
+
+- **Usuarios nuevos:** cada escenario registra su propio usuario **desde la interfaz**, con datos únicos generados en el momento ([`userData.js`](features/support/userData.js): marca de tiempo + secuencia + azar). Nunca se crean usuarios escribiendo en localStorage ni se reutiliza un usuario entre escenarios. Por eso los escenarios son independientes y no dependen de la fecha. Se registra un usuario de **cada tipo** (Huésped, Frecuente, Corporativo) para verificar que reciba sus reglas.
+- **Usuarios sembrados:** los 6 (`lvargas`, `rmamani`, `sflores`, `dchoque`, `ptorrez`, `admin`) se usan solo donde se relacionan con el registro:
+  - **Duplicados:** su usuario y su correo, exactos, en mayúsculas y con espacios.
+  - **Aislamiento:** los 5 activos no ven la reserva del nuevo, y el nuevo no ve reservas de nadie.
+  - **Doble reserva:** el nuevo no puede reservar las fechas de lvargas. El inciso 2 solo lo probó con reservas del mismo usuario.
+  - **Integridad:** registrar y reservar no cambia ningún dato de los 6. A `ptorrez`, que no puede ingresar, se lo verifica en el almacenamiento.
+
+### Diseño de las pruebas
+
+| Grupo | Qué se prueba | Tipo |
+|---|---|---|
+| **Navegación al registro** | "Regístrese" desde el login y "Inicie sesión" de vuelta. Un usuario con sesión no debería ver el registro | Camino feliz · negativo |
+| **Registro exitoso y datos guardados** | Registro de cada tipo; mensaje, login y ninguna sesión iniciada. Rol, estado, tipo, id único y datos sin espacios. Contraseña legible. Tipo inyectado desde DevTools (admin, VIP). Registros simultáneos en dos pestañas (ids distintos) y el mismo usuario desde dos pestañas | Camino feliz · seguridad · riesgo alto |
+| **Validaciones del formulario** | Formulario vacío. Cada campo con datos inválidos (19 casos), incluidas la política de contraseña y la contraseña igual al usuario. Valores límite aceptados. Nombre con números, nombre de 5000 caracteres y XSS en el nombre (cabecera, bienvenida y titular). Errores accesibles | Negativo · seguridad |
+| **Duplicados** | Usuario y correo de los 6 sembrados (exacto, mayúsculas, espacios) y de un usuario recién registrado | Negativo · seguridad |
+| **Primer ingreso** | Por tipo: cabecera, bienvenida, Mis reservas vacía y "0 de 2 / 4 / 6" | Camino feliz |
+| **Reserva de 2 noches** (`@smoke`) | Titular del nuevo, 2 noches, Bs 700, confirmación y fila en Mis reservas ("1 de 2"). Persistencia al recargar y al volver a ingresar. Límite por tipo (el Frecuente nuevo no hereda el no-show de sflores). Fechas reservadas por otro usuario, en el calendario y en la lógica de la app | Camino feliz · riesgo crítico/alto |
+| **Aislamiento e integridad** | El nuevo no ve reservas ajenas (pantalla y API). Los 5 activos no ven la suya. Los datos de los 6 no cambian | Seguridad · riesgo alto |
+
+**Riesgos críticos y altos:** los escenarios del flujo principal (reserva y persistencia), de
+aislamiento, de integridad, de doble reserva, de escalamiento de tipo y de colisión de ids se
+diseñaron para detectar defectos *blocker* (que impiden el flujo o comprometen datos de otros
+usuarios). El límite por tipo y el total de 2 noches apuntan a defectos *critical* (regla de negocio
+o monto). **Todos pasan**: la aplicación protege bien los datos de los demás usuarios.
+
+### Decisiones técnicas
+
+- **Datos únicos por escenario** desde la interfaz, como haría un visitante real.
+- **Page object del registro** ([`register.page.js`](features/pageobjects/register.page.js)) con los campos por su nombre visible. La manipulación desde DevTools (agregar un tipo al `select`) también vive en el page object.
+- **"La cuenta no debería crearse"** espera la respuesta de la app y compara la cantidad de usuarios guardados antes y después, para no repetir el falso positivo del inciso 2.
+- **Duplicados en un solo escenario por usuario sembrado**: el step prueba las tres formas de escribirlo (exacto, mayúsculas, espacios) y adjunta el resultado de cada una a Allure.
+- **Steps reutilizados**: login, cierre de sesión, pestañas, rutas e inyección de código del inciso 1; detalle, formulario de reserva, límite y Mis reservas del inciso 2.
+- **Evidencias con ID compartido**: si un defecto lo reproducen varios escenarios (por ejemplo, DEF-003 en los incisos 1 y 3), cada escenario tiene su subcarpeta en `docs/evidencias/<ID>/`.
+
+### Defectos encontrados
+
+Fallan 6 escenarios, todos analizados como fallas de la aplicación:
+
+| ID | Defecto | Severidad | |
+|---|---|---|---|
+| DEF-018 | Se acepta una contraseña igual al nombre de usuario | Media | Nuevo |
+| DEF-017 | Un nombre sin largo máximo rompe la pantalla y oculta "Cerrar sesión" | Media | Nuevo |
+| DEF-016 | Con sesión iniciada se puede abrir el registro y crear cuentas | Baja | Nuevo |
+| DEF-003 | La contraseña del usuario nuevo se guarda legible | Crítica | Ya reportado (inciso 1) |
+| DEF-014 | El nombre del usuario acepta números | Baja | Ya reportado (inciso 2), ampliado al registro |
+| DEF-010 | Los errores del registro no se marcan de forma accesible | Baja | Ya reportado (inciso 1), ampliado al registro |
+
+**No se encontraron defectos *blocker* ni *critical* propios del inciso 3.** El flujo principal,
+el aislamiento entre usuarios, la integridad de los datos, los duplicados, el límite por tipo y el
+total funcionan. El único defecto de severidad crítica que aparece es DEF-003, que ya estaba
+reportado.
+
+**Observación (no reportada como defecto):** cualquier visitante puede elegir el tipo
+"Corporativo" al registrarse y obtener un límite de 6 reservas activas, el triple que un Huésped.
+El formulario ofrece la opción a propósito y no hay una regla que diga que el tipo se otorga o se
+verifica, así que se documenta como observación. Las pruebas verifican que cada tipo reciba sus
+reglas.
 
 ## Inciso 4: Mis reservas
 
