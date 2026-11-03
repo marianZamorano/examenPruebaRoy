@@ -112,7 +112,10 @@ relacionada con la caché.
 
 ### Estado de un defecto
 
-Solo los llevan los escenarios cuyo comportamiento esperado la aplicación **no cumple actualmente**:
+`@bug` e `@issue` solo los llevan los escenarios cuyo comportamiento esperado la aplicación **no
+cumple actualmente**. `@severity` también: en los incisos 1 a 3 solo los escenarios `@bug` la
+llevan, y en el inciso 4 la llevan **todos**, para indicar en Allure a qué riesgo apunta cada
+escenario (ver [Inciso 4](#inciso-4-mis-reservas-modificar-a-14-noches-y-cancelar)).
 
 | Tag | Significado | En Allure |
 |---|---|---|
@@ -146,7 +149,8 @@ features/
 │   ├── myBookings.page.js                  # /mis-reservas
 │   └── components/
 │       ├── bookingModal.js                 # modal de reserva
-│       ├── calendar.js                     # calendario (búsqueda y reserva)
+│       ├── modifyModal.js                  # modal de modificar fechas (Mis reservas)
+│       ├── calendar.js                     # calendario (búsqueda, reserva y modificación)
 │       ├── header.js                       # cabecera (usuario, menú, cerrar sesión)
 │       └── footer.js                       # pie de página (restablecer datos)
 ├── step-definitions/                       # implementación de los pasos (sin selectores)
@@ -158,6 +162,7 @@ features/
 │   └── myBookings.steps.js
 └── support/
     ├── inspector.js                        # lectura del navegador, capturas y adjuntos de Allure
+    ├── bookings.js                         # crear reservas desde la interfaz y leer las guardadas
     ├── formatters.js                       # fechas relativas a hoy y montos en Bs
     └── userData.js                         # datos únicos para registrar usuarios nuevos
 docs/
@@ -467,6 +472,150 @@ El formulario ofrece la opción a propósito y no hay una regla que diga que el 
 verifica, así que se documenta como observación. Las pruebas verifican que cada tipo reciba sus
 reglas.
 
-## Inciso 4: Mis reservas
+## Inciso 4: Mis reservas, modificar a 14 noches y cancelar
 
-*Pendiente.*
+**Feature:** [`features/04_mis_reservas.feature`](features/04_mis_reservas.feature)
+
+> Feature que contenga las funcionalidades de ingresar a la página, ver Mis reservas, modificar la
+> fecha de una reserva a 14 noches y cancelar una reserva.
+
+### Alcance: sin duplicar otros incisos
+
+Antes de diseñar se revisaron los tres features anteriores y el reporte de defectos. El inciso 4
+prueba **solo lo que depende de Mis reservas, de modificar fechas o de cancelar**:
+
+| No se repite | Porque ya lo cubre |
+|---|---|
+| `/mis-reservas` sin sesión, "atrás" tras el logout (BUG-001), logout en otra pestaña (BUG-003), usuario bloqueado que conserva la sesión (BUG-002) | Inciso 1 |
+| Fila de una reserva recién creada (0/1, Confirmada, acciones habilitadas) y contador de cada usuario tras crearla; navegación de meses del calendario; `lvargas` que cancela o modifica una reserva de `rmamani` por la API | Inciso 2 |
+| Mis reservas vacía y aislamiento del usuario nuevo | Inciso 3 |
+
+Cuando un escenario reproduce un defecto ya reportado, usa su **mismo ID**: BUG-004 (un usuario
+bloqueado también puede **modificar**) y DEF-011 (el foco tampoco pasa al modal de modificar).
+
+**Descartado a propósito:**
+- Un usuario nuevo que modifica o cancela: usa la misma lógica que los sembrados.
+- Un usuario bloqueado que **cancela**: no hay ninguna regla que lo prohíba y solo libera la habitación.
+- Que la segunda pestaña se actualice sola: es la causa de BUG-003.
+- XSS: modificar y cancelar no tienen campos de texto.
+
+### Análisis previo
+
+Se exploró con WebdriverIO el flujo login → Mis reservas → modificar fechas → guardar → cancelar →
+confirmar, junto con lo que guarda la app en `localStorage` y lo que permite `window.__hotelApi`
+(`modifyReservation`, `cancelReservation`, `listMyReservations`). Todos los mensajes esperados del
+feature son los de la aplicación real.
+
+| Elemento | Comportamiento encontrado |
+|---|---|
+| Tabla | Código, Habitación, Check-in, Check-out, Noches, Huésp., Total, Modif., Estado y Acciones, de la reserva más nueva a la más antigua. Filtros por estado |
+| Estados | Confirmada, En curso, Finalizada, Cancelada, No presentado. Solo las dos primeras son **activas** |
+| Acciones | Confirmada: "Modificar fechas" y "Cancelar". En curso: las dos deshabilitadas con el motivo. Las demás: sin botones |
+| Modificar | Dos modos: *"Mantener N noches (solo cambia el check-in)"* y *"Elegir nuevas fechas"* (1 a 14 noches). Resumen con las nuevas fechas, las noches y el nuevo total. *"Reserva R0008 modificada: 03/12/2026 → 17/12/2026."* |
+| Reglas de modificar | Solo confirmadas, **1 modificación**, al menos **2 días** antes del check-in, check-in entre mañana y 180 días, fechas distintas a las actuales y sin solapar otras reservas (la propia no cuenta). Total = noches × tarifa |
+| Cancelar | Diálogo *"¿Confirma la cancelación de la reserva R0008 (habitación H105, … → …)?"* con el foco en "No, volver". *"Reserva R0008 cancelada."* Se puede cancelar hasta el día anterior al check-in |
+| Efectos | Al modificar se liberan las fechas viejas. Al cancelar se liberan la habitación y el cupo del límite. Todo persiste |
+
+### Usuarios
+
+Cada escenario que modifica o cancela **crea antes su propia reserva desde la interfaz**, con el
+step del inciso 2 y fechas "dentro de N días". Así no consume ni altera las reservas sembradas y no
+depende de otros escenarios. Las reservas sembradas se buscan **por su situación** (finalizada, en
+curso…), no por un código fijo, y solo reciben intentos que la aplicación debe rechazar.
+
+| Usuario | Situación | Qué aporta |
+|---|---|---|
+| `lvargas` | Huésped 1/2: confirmada y finalizada | Camino feliz. Finalizada sin acciones. Límite 2/2: modificar en el límite y cancelar para liberar el cupo. Su reserva sirve como "fechas de otro usuario" |
+| `rmamani` | 2/2, una reserva **en curso** | En curso: acciones deshabilitadas con motivo y rechazo en la API. Cuenta como activa |
+| `sflores` | Frecuente, **no-show** | No presentado sin acciones y rechazo en la API. No crea reservas propias porque el no-show se lo impide |
+| `dchoque` | Corporativo, **check-in mañana** y una **cancelada** | Check-in cercano: no se puede modificar, sí cancelar. Anticipación de 1 y 2 días. "Ya fue cancelada". Dos pestañas. Usuario bloqueado durante la sesión |
+| `admin` | Rol admin, 0/6 | Camino feliz. El rol admin **no** da acceso a reservas ajenas |
+| `ptorrez` | Bloqueado, sin reservas | No puede ingresar (inciso 1). Su situación se prueba bloqueando a `dchoque` durante la sesión, y sus datos se incluyen en la verificación de integridad |
+
+### Diseño de las pruebas
+
+| Grupo | Qué se prueba | Tipo |
+|---|---|---|
+| **Ver Mis reservas** | Columnas, orden y filtro activo. Acciones y motivo según la situación de cada reserva sembrada. Filtros, también sin resultados. El resumen "X de N" coincide con la tabla en los 5 usuarios activos | Camino feliz · riesgo alto |
+| **Modificar fechas** (`@smoke`) | De 6 a **14 noches** con 3 usuarios: resumen, confirmación, fila y "1/1". Datos y reglas del formulario. Mantener las noches. "Cancelar", Escape y mismas fechas no cambian nada. Foco del modal | Camino feliz · negativo · accesibilidad |
+| **Rango de noches y total** | 13 y 14 noches recalculan el total (Bs 4.550, Bs 4.900, Bs 16.800); hasta 14 sí, 15 no. Por la API: 0 y 15 noches, check-out anterior al check-in, check-in hoy, ayer o después de 180 días. Total, tarifa, contador y dueño enviados por la API se ignoran | Riesgo crítico · seguridad |
+| **Fechas permitidas y ocupadas** | Nuevo check-in de mañana al día 180. Fechas de otra reserva propia y de otro usuario bloqueadas (calendario y API). Al modificar, las fechas viejas quedan libres para otro usuario y las nuevas, ocupadas | Riesgo crítico · seguridad |
+| **Límite de modificaciones y anticipación** | Una sola modificación (botón y API). 1 día de anticipación: no; 2 días: sí. El límite de reservas activas no impide modificar | Riesgo crítico |
+| **Cancelar** (`@smoke`) | Con 3 usuarios: diálogo, foco, confirmación, "Cancelada" sin acciones y resumen −1. **Flujo completo del enunciado** (modificar a 14 noches y cancelar). Desistir con "No, volver" o Escape. Doble clic. Día anterior al check-in. Reserva cancelada, finalizada, no presentada o en curso: rechazo también en la API. Libera la habitación y el cupo | Camino feliz · negativo · riesgo crítico |
+| **Seguridad e integridad** (`@security`) | Usuario bloqueado que modifica. Rol admin sobre reservas ajenas. Contador, total y dueño editados en el almacenamiento. Las acciones no alteran los datos de los demás | Seguridad · riesgo crítico |
+| **Persistencia y concurrencia** | Recargar y volver a ingresar. Desde dos pestañas: cancelar dos veces, modificar una reserva ya modificada o cancelada, y que la tabla muestre el estado real tras el rechazo | Riesgo alto · usabilidad |
+
+**Severidad en todos los escenarios:** en este inciso cada escenario lleva `@severity` según el
+riesgo al que apunta, para que Allure muestre la cobertura por riesgo y no solo los defectos:
+
+| `@severity` | Criterio | Escenarios |
+|---|---|---|
+| `blocker` | Impide modificar o cancelar en el flujo principal, o compromete la seguridad o las reservas de otros usuarios | Modificar a 14 noches, cancelar, flujo completo, total manipulado, fechas de otro usuario, rol admin, almacenamiento editado, integridad |
+| `critical` | Viola una regla de negocio (estados, límites, fechas) o calcula mal un monto | Acciones por situación, total, 14/15 noches, reglas en la API, fechas, una modificación, anticipación, desistir, día anterior, estados no cancelables, liberación, persistencia, pestañas, bloqueado |
+| `normal` / `minor` | Validaciones, mensajes, usabilidad | Tabla, filtros, resumen, formulario, mismas fechas, doble clic, foco, tabla tras un rechazo |
+
+### Decisiones técnicas
+
+- **Componente `modifyModal.js`**: el modal de modificar usa el mismo calendario que la búsqueda y la reserva, así que reutiliza `new Calendar('modify')` sin código nuevo de calendario.
+- **Acciones compartidas en [`support/bookings.js`](features/support/bookings.js)**: crear una reserva desde la interfaz y leer las guardadas, usadas por los steps de los incisos 2 y 4. Se movieron sin cambiar su comportamiento.
+- **La reserva se sigue por su código**: al modificarla, el step actualiza las fechas esperadas y guarda las anteriores, para verificar la fila nueva y que las fechas viejas quedaron libres.
+- **"La reserva guardada no debería cambiar"** compara la reserva del `localStorage` antes y después: así un rechazo se verifica en los datos, no solo en el mensaje.
+- **El motivo de una acción deshabilitada** se verifica en el `title` del botón, que es donde la app lo muestra.
+- **Doble clic real** (`doubleClick()` de WebDriver) en "Sí, cancelar". Con tres clics sintéticos en el mismo instante la app muestra la confirmación y un error a la vez, pero eso no lo puede hacer un usuario: un doble clic real no lo reproduce, así que se descartó como artefacto de la técnica de prueba.
+- **Steps reutilizados**: login, menú, recarga, pestañas y bloqueo del inciso 1; reservar, límite, reservas ajenas por la API y fechas ocupadas del inciso 2; verificación de integridad del inciso 3.
+
+### Defectos encontrados
+
+Fallan 7 escenarios, todos analizados como fallas de la aplicación:
+
+| ID | Defecto | Severidad | |
+|---|---|---|---|
+| DEF-019 | Las reglas de las reservas confían en datos editables del almacenamiento: contador de modificaciones reiniciado, total "Bs 1" y **cancelación de la reserva de otro usuario** | Crítica | Nuevo (3 escenarios) |
+| BUG-004 | Un usuario bloqueado también puede **modificar** sus reservas | Alta | Ya reportado (inciso 2), ampliado a la modificación |
+| DEF-020 | Tras rechazar una acción repetida desde otra pestaña, la tabla sigue mostrando el estado anterior | Baja | Nuevo (2 escenarios) |
+| DEF-011 | El foco no pasa al modal "Modificar fechas" | Baja | Ya reportado (inciso 2), ampliado al modal de modificar |
+
+**Las reglas de negocio de modificar y cancelar se cumplen** en la interfaz, en la API interna y
+desde dos pestañas: estados, una sola modificación, anticipación, rango de 1 a 14 noches, fechas
+permitidas y ocupadas, total, liberación de fechas y de cupo, aislamiento entre usuarios y
+persistencia. Lo que falla es que esas reglas **confían en el almacenamiento** (DEF-019) y no
+validan el **estado del usuario** (BUG-004).
+
+Durante el análisis hubo un **error de la prueba** que se corrigió sin reportarlo: los encabezados
+de la tabla se ven en mayúsculas por CSS, y el step comparaba el texto renderizado en lugar del
+texto real de la columna.
+
+## Cierre del examen
+
+| Inciso | Feature | Defectos nuevos | Defectos ya reportados que reproduce |
+|---|---|---|---|
+| 1. Login | [`01_login.feature`](features/01_login.feature) | BUG-001 a BUG-003, DEF-003 a DEF-010 | — |
+| 2. Detalle y reserva de 6 noches | [`02_reserva_6_noches.feature`](features/02_reserva_6_noches.feature) | BUG-004, DEF-011 a DEF-015 | — |
+| 3. Registro y reserva de 2 noches | [`03_registro_y_reserva_2_noches.feature`](features/03_registro_y_reserva_2_noches.feature) | DEF-016 a DEF-018 | DEF-003, DEF-010, DEF-014 |
+| 4. Mis reservas, modificar a 14 noches y cancelar | [`04_mis_reservas.feature`](features/04_mis_reservas.feature) | DEF-019, DEF-020 | BUG-004, DEF-011 |
+
+**22 defectos** en total: 3 de severidad crítica (DEF-003, DEF-004, DEF-019), 4 altas (BUG-001 a
+BUG-004), 5 medias y 10 bajas, todos con su ficha, sus pasos y su evidencia en
+[`docs/REPORTE_DEFECTOS.md`](docs/REPORTE_DEFECTOS.md). Ningún defecto se reportó dos veces: cuando
+otro inciso reproduce la misma causa, su escenario usa el mismo ID.
+
+**Patrón de los defectos más graves:** la aplicación es solo de navegador y guarda todo en
+`localStorage`. De ahí vienen las contraseñas legibles (DEF-003), la sesión suplantable (DEF-004), las
+reglas de reservas que se saltan editando datos (DEF-019) y las pestañas que no se enteran de los
+cambios (BUG-001, BUG-003, DEF-020). La segunda causa es que el estado del usuario solo se valida al
+iniciar sesión (BUG-002, BUG-004). Corregir esas dos causas, con la validación en un servidor y una
+sesión real, resolvería la mayoría de los defectos de severidad crítica y alta.
+
+**Ejecución final (`npm test`, 03/11/2026):** 275 ejecuciones de escenarios (contando cada ejemplo
+de los `Scenario Outline`). **243 pasan** y **32 no pasan, todas `@bug`**, cada una en el paso que
+demuestra su defecto. Ningún escenario de regresión falla.
+
+| Inciso | Ejecuciones | Pasan | `@bug` |
+|---|---|---|---|
+| 1 | 44 | 33 | 11 |
+| 2 | 89 | 81 | 8 |
+| 3 | 62 | 56 | 6 |
+| 4 | 80 | 73 | 7 |
+
+Con `npm test` se ejecuta todo; con `npm run test:regresion`, todo lo que debe funcionar (siempre en
+verde); y con `npm run report`, el reporte de Allure con el historial de ejecuciones.

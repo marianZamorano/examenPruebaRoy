@@ -3,15 +3,16 @@
 | | |
 |---|---|
 | **Aplicación** | [Hotel QA](https://hotel-qa-f51.pages.dev/) |
-| **Módulos evaluados** | Inicio de sesión y manejo de sesión (Inciso 1) · Detalle y reserva de habitación (Inciso 2) · Registro de usuario y reserva del usuario nuevo (Inciso 3) |
+| **Módulos evaluados** | Inicio de sesión y manejo de sesión (Inciso 1) · Detalle y reserva de habitación (Inciso 2) · Registro de usuario y reserva del usuario nuevo (Inciso 3) · Mis reservas, modificación y cancelación (Inciso 4) |
 | **Fecha** | 03/11/2026 |
 | **Entorno** | Windows 11 · Google Chrome 156 · WebdriverIO 10 · Cucumber · Allure |
 | **Datos de prueba** | Usuarios de prueba publicados en la pantalla de login |
 
 Todos los defectos se detectaron **al ejecutar los escenarios diseñados** en
 [`features/01_login.feature`](../features/01_login.feature),
-[`features/02_reserva_6_noches.feature`](../features/02_reserva_6_noches.feature) y
-[`features/03_registro_y_reserva_2_noches.feature`](../features/03_registro_y_reserva_2_noches.feature),
+[`features/02_reserva_6_noches.feature`](../features/02_reserva_6_noches.feature),
+[`features/03_registro_y_reserva_2_noches.feature`](../features/03_registro_y_reserva_2_noches.feature) y
+[`features/04_mis_reservas.feature`](../features/04_mis_reservas.feature),
 que describen el comportamiento esperado. El escenario que detectó cada defecto se etiquetó con `@bug`
 y `@issue=<ID>`, y falla en el paso donde la aplicación no cumple lo esperado. Si un inciso reproduce
 un defecto ya reportado, su escenario usa el **mismo ID** y la ficha lo lista como escenario adicional:
@@ -78,6 +79,7 @@ guarda en `allure-history/`, y en el historial de git.
 | [BUG-004](#bug-004) | Un usuario bloqueado puede seguir creando reservas | Bug · Seguridad | Alta | Alta |
 | [DEF-003](#def-003) | Contraseñas almacenadas en texto plano en el navegador | Defecto de diseño · Seguridad | Crítica | Media |
 | [DEF-004](#def-004) | La sesión puede suplantarse editando el almacenamiento | Defecto de diseño · Seguridad | Crítica | Media |
+| [DEF-019](#def-019) | Las reglas de las reservas confían en datos editables del almacenamiento | Defecto de diseño · Seguridad | Crítica | Media |
 | [DEF-005](#def-005) | Sin límite de intentos fallidos de inicio de sesión | Defecto de diseño · Seguridad | Media | Media |
 | [DEF-007](#def-007) | La sesión no expira | Defecto de diseño · Seguridad | Media | Media |
 | [DEF-018](#def-018) | Se acepta una contraseña igual al nombre de usuario | Defecto de diseño · Seguridad | Media | Media |
@@ -92,8 +94,9 @@ guarda en `allure-history/`, y en el historial de git.
 | [DEF-016](#def-016) | Con sesión iniciada se puede abrir el registro y crear cuentas | Defecto de diseño · Control de acceso | Baja | Baja |
 | [DEF-011](#def-011) | El foco no pasa al formulario de reserva al abrirlo | Defecto de diseño · Accesibilidad | Baja | Baja |
 | [DEF-012](#def-012) | El formulario de reserva no marca de forma accesible los errores | Defecto de diseño · Accesibilidad | Baja | Baja |
+| [DEF-020](#def-020) | Tras rechazar una acción, Mis reservas sigue mostrando el estado anterior de la reserva | Bug · Usabilidad | Baja | Baja |
 
-BUG-001 a BUG-003 y DEF-003 a DEF-010 corresponden al inciso 1 (login); BUG-004 y DEF-011 a DEF-015, al inciso 2 (reserva); DEF-016 a DEF-018, al inciso 3 (registro). El inciso 3 también reproduce DEF-003, DEF-010 y DEF-014 en el registro, con el mismo ID.
+BUG-001 a BUG-003 y DEF-003 a DEF-010 corresponden al inciso 1 (login); BUG-004 y DEF-011 a DEF-015, al inciso 2 (reserva); DEF-016 a DEF-018, al inciso 3 (registro); DEF-019 y DEF-020, al inciso 4 (Mis reservas). El inciso 3 también reproduce DEF-003, DEF-010 y DEF-014 en el registro, y el inciso 4 reproduce BUG-004 (modificación) y DEF-011 (modal de modificar), siempre con el mismo ID.
 
 La evidencia de la última ejecución (captura de cada paso con DevTools, video y resultado de cada defecto) está en [`evidencias/`](evidencias/README.md), con un índice generado automáticamente.
 
@@ -179,18 +182,21 @@ La evidencia de la última ejecución (captura de cada paso con DevTools, video 
 
 | Severidad | Prioridad | Escenarios |
 |---|---|---|
-| Alta | Alta | *Un usuario bloqueado no puede reservar fuera del formulario* |
+| Alta | Alta | *Un usuario bloqueado no puede reservar fuera del formulario* (inciso 2) · *Un usuario bloqueado no puede modificar sus reservas fuera del formulario* (inciso 4) |
 
 **Pasos**
 1. Iniciar sesión con `dchoque`.
 2. Bloquear al usuario. Igual que en [BUG-002](#bug-002), la prueba cambia su estado a `"bloqueado"` en el almacenamiento, como está guardado `ptorrez`.
 3. Solicitar a la lógica de la aplicación (`window.__hotelApi.createReservation`) una reserva de `H105` por 6 noches, con check-in dentro de 30 días.
+4. En el inciso 4: con una reserva propia creada antes del bloqueo, solicitar `window.__hotelApi.modifyReservation` para pasarla a 14 noches.
 
-**Resultado esperado:** la reserva se rechaza porque el usuario está bloqueado.
+**Resultado esperado:** la reserva y la modificación se rechazan porque el usuario está bloqueado.
 
-**Resultado obtenido:** `ok: true`. La reserva queda guardada como "Confirmada" en Mis reservas y sus fechas pasan a estar ocupadas para los demás huéspedes. En la exploración también se confirmó desde el formulario (*"Reserva R0008 confirmada."*) con `lvargas` y `dchoque`, después de recargar la página.
+**Resultado obtenido:** `ok: true`. La reserva queda guardada como "Confirmada" en Mis reservas y sus fechas pasan a estar ocupadas para los demás huéspedes. En la exploración también se confirmó desde el formulario (*"Reserva R0008 confirmada."*) con `lvargas` y `dchoque`, después de recargar la página. La modificación también se acepta: la reserva pasa a 14 noches (Bs 4.900) y ocupa 8 noches más.
 
-**Análisis:** la creación de la reserva valida noches, fechas, capacidad, solapamiento, límite de reservas y no-show, pero **no el estado del usuario**.
+**Análisis:** la creación de la reserva valida noches, fechas, capacidad, solapamiento, límite de reservas y no-show, pero **no el estado del usuario**. La modificación tiene la misma omisión: valida estado de la reserva, cantidad de modificaciones, anticipación, fechas y solapamiento, pero no el estado del usuario. Es la misma causa, por eso el inciso 4 usa el mismo ID.
+
+**Cancelar no se incluye:** que un usuario bloqueado cancele solo libera la habitación, y la aplicación no tiene una regla que lo prohíba. No se puede afirmar que sea un defecto.
 
 **Por qué no duplica [BUG-002](#bug-002):** BUG-002 es que el usuario bloqueado conserva la sesión. Este defecto es que la **reserva** no valida el estado del usuario. Por eso se prueba directamente contra la lógica de la reserva y no desde la interfaz: desde la interfaz, el escenario dependería de BUG-002 y pasaría en cuanto se corrija la sesión, aunque la reserva siga sin validar el estado. Corregir BUG-002 no corrige este defecto.
 
@@ -362,15 +368,15 @@ La evidencia de la última ejecución (captura de cada paso con DevTools, video 
 
 | Severidad | Prioridad | Escenario |
 |---|---|---|
-| Baja | Baja | *El foco pasa al formulario de reserva al abrirlo* |
+| Baja | Baja | *El foco pasa al formulario de reserva al abrirlo* (inciso 2) · *El foco pasa al formulario de modificación al abrirlo* (inciso 4) |
 
-**Pasos:** iniciar sesión con `lvargas`, abrir el detalle de `H105` y hacer clic en "Reservar".
+**Pasos:** iniciar sesión con `lvargas`, abrir el detalle de `H105` y hacer clic en "Reservar". En el inciso 4: en Mis reservas, hacer clic en "Modificar fechas" de una reserva propia.
 
 **Resultado esperado:** el foco pasa a un elemento del diálogo, como indica el patrón de diálogo modal de WAI-ARIA (`role="dialog"`, `aria-modal="true"`).
 
-**Resultado obtenido:** `document.activeElement` sigue siendo el botón "Reservar", detrás del modal. Un usuario de teclado o de lector de pantalla no sabe que se abrió el formulario.
+**Resultado obtenido:** `document.activeElement` sigue siendo el botón "Reservar" (o "Modificar fechas"), detrás del modal. Un usuario de teclado o de lector de pantalla no sabe que se abrió el formulario.
 
-**Aspectos correctos:** el diálogo tiene `role="dialog"`, `aria-modal` y título asociado, y se cierra con Escape.
+**Aspectos correctos:** los dos diálogos tienen `role="dialog"`, `aria-modal` y título asociado, y se cierran con Escape. El diálogo de cancelar reserva **sí** pasa el foco a su botón "No, volver": la aplicación ya resuelve el caso en un diálogo, pero no en los otros dos.
 
 **Evidencia:** [capturas de cada paso con DevTools y video](evidencias/DEF-011/)
 
@@ -518,6 +524,61 @@ La evidencia de la última ejecución (captura de cada paso con DevTools, video 
 
 ---
 
+## DEF-019
+
+**Las reglas de las reservas confían en datos editables del almacenamiento**
+
+| Severidad | Prioridad | Escenarios |
+|---|---|---|
+| Crítica | Media | *Reiniciar el contador de modificaciones en el almacenamiento no permite modificar otra vez* · *Editar el total en el almacenamiento no cambia el monto de la reserva* · *Cambiar el dueño de una reserva en el almacenamiento no permite cancelar la reserva de otro usuario* |
+
+**Pasos** (con sesión iniciada, editando `localStorage["hotel-qa:db"]` desde DevTools, como lo haría cualquier usuario)
+1. **Contador:** `lvargas` reserva `H105` y la modifica a 14 noches (Modif. 1/1). Se cambia `modifications` de la reserva a `0` y se solicita otra modificación (`window.__hotelApi.modifyReservation`).
+2. **Total:** `lvargas` reserva `H105` por 6 noches (Bs 2.100). Se cambia `total` a `1` y se abre Mis reservas.
+3. **Dueño:** `dchoque` reserva `H105` y cierra sesión. `lvargas` inicia sesión, cambia el `userId` de esa reserva por el suyo (`U002`) y la cancela (`window.__hotelApi.cancelReservation`).
+
+**Resultado esperado:** la aplicación no acepta los datos editados: rechaza la segunda modificación (*"La reserva ya fue modificada una vez."*), muestra el total real (noches × tarifa) y no permite cancelar una reserva de otro usuario (*"La reserva no existe."*).
+
+**Resultado obtenido:**
+1. La segunda modificación se acepta (`ok: true`) y el contador vuelve a `1`: la regla de una sola modificación se puede saltar cuantas veces se quiera.
+2. Mis reservas muestra **"Bs 1"**.
+3. La cancelación se acepta (`ok: true`): **la reserva de `dchoque` queda cancelada** por otro usuario, y sus fechas quedan libres.
+
+**Análisis:** toda la lógica de las reservas está en el navegador y lee el estado de `localStorage` sin ninguna verificación de integridad. Cada regla (contador de modificaciones, total, dueño de la reserva) confía en un valor que el propio usuario puede editar. Las reglas sí se cumplen cuando se usan la interfaz o la API interna con datos sin editar (ver *Verificado sin defecto*).
+
+**Por qué no duplica [DEF-004](#def-004):** DEF-004 es que la **sesión** es solo un identificador editable. Este defecto es que las **reglas de negocio de las reservas** confían en datos editables, y no depende de la sesión: el escenario del dueño usa la sesión legítima de `lvargas`. Corregir la sesión no corrige este defecto.
+
+**Prioridad:** Media por el mismo motivo que DEF-003 y DEF-004: la aplicación se declara como entorno de práctica con datos en localStorage. En un sistema real, estas reglas se validan en el servidor y la severidad y la prioridad serían las más altas.
+
+**Evidencia:** [capturas de cada paso con DevTools y video](evidencias/DEF-019/)
+
+---
+
+## DEF-020
+
+**Tras rechazar una acción, Mis reservas sigue mostrando el estado anterior de la reserva**
+
+| Severidad | Prioridad | Escenarios |
+|---|---|---|
+| Baja | Baja | *Tras rechazar una cancelación repetida, Mis reservas muestra el estado actual* · *Tras rechazar una modificación repetida, Mis reservas muestra el estado actual* |
+
+**Pasos**
+1. Iniciar sesión con `dchoque`, reservar `H105` y abrir Mis reservas en dos pestañas.
+2. En la pestaña 1, cancelar la reserva (o modificarla a 14 noches).
+3. En la pestaña 2, intentar cancelarla (o modificarla) otra vez.
+
+**Resultado esperado:** la aplicación rechaza la acción y la fila pasa a mostrar el estado actual de la reserva.
+
+**Resultado obtenido:** la regla se cumple: la acción se rechaza con *"La reserva ya fue cancelada."* (o *"La reserva ya fue modificada una vez."*) y no se guarda nada. Pero la fila **sigue mostrando "Confirmada"** con "Cancelar" habilitado (o las fechas, el total y "0/1" anteriores) hasta que se recarga la página. El mensaje de error contradice lo que muestra la tabla.
+
+**Análisis:** después de una acción exitosa, Mis reservas vuelve a leer las reservas; después de un error, no.
+
+**Por qué no duplica [BUG-003](#bug-003):** BUG-003 es que la pestaña no se entera **sola** de los cambios (no escucha el evento `storage`). Este escenario no exige eso: solo que, una vez que la propia aplicación respondió que la reserva cambió, la tabla lo refleje.
+
+**Evidencia:** [capturas de cada paso con DevTools y video](evidencias/DEF-020/)
+
+---
+
 ## Verificado sin defecto
 
 Comprobaciones automatizadas que **pasan** (se ejecutan con `npm test`):
@@ -575,3 +636,28 @@ Comprobaciones automatizadas que **pasan** (se ejecutan con `npm test`):
 | El usuario nuevo no puede reservar fechas ya reservadas por otro usuario (calendario y lógica de la app) | *El usuario nuevo no puede reservar fechas ya reservadas por otro usuario* |
 | Aislamiento: el nuevo no ve reservas ajenas y los 5 usuarios activos no ven la suya | *El usuario nuevo no ve reservas de otros usuarios* · *Un usuario existente no ve la reserva del usuario nuevo* |
 | Registrar y reservar no altera los usuarios ni las reservas existentes (incluido ptorrez) | *Registrar un usuario y reservar no altera los datos de los usuarios existentes* |
+
+**Inciso 4: Mis reservas, modificación y cancelación**
+
+| Prueba | Escenario |
+|---|---|
+| Columnas, filtro "Todas" activo y orden de la más nueva a la más antigua | *Ver Mis reservas desde el menú* |
+| Cada situación muestra solo las acciones permitidas, con el motivo: finalizada, no presentada y cancelada sin acciones; en curso con las dos deshabilitadas; check-in mañana sin modificar pero con cancelar | *Acciones disponibles según la situación de la reserva* |
+| Los filtros muestran solo las reservas de su estado, o *"No hay reservas para mostrar."* | *Filtrar Mis reservas por estado* |
+| "Reservas activas: X de N" coincide con las confirmadas y en curso de la tabla, con el límite de cada tipo (5 usuarios) | *El resumen de reservas activas coincide con la tabla* |
+| Modificar de 6 a 14 noches (lvargas, dchoque, admin): resumen, confirmación, fila (fechas, 14 noches, Bs 4.900, 1/1) y resumen sin cambios | *Modificar una reserva a 14 noches* |
+| El formulario muestra la reserva, las fechas actuales, los dos modos, el rango permitido y el aviso de una sola modificación; "Guardar" se habilita al elegir fechas | *El formulario de modificación muestra la reserva y sus reglas* · *Mantener las noches y cambiar solo el check-in* |
+| "Cancelar", Escape y guardar las mismas fechas no cambian la reserva ni consumen la modificación | *Cerrar el formulario de modificación…* · *Guardar las mismas fechas no consume la modificación* |
+| El total se recalcula con la tarifa (13 y 14 noches); hasta 14 noches sí, 15 no | *Al modificar, el total se recalcula con la tarifa* · *Se puede modificar hasta 14 noches pero no 15* |
+| Fuera del formulario se rechazan 0 y 15 noches, check-out anterior al check-in y check-in hoy, ayer o después de 180 días; se ignoran el total, la tarifa, el contador y el dueño enviados | *Las reglas de la modificación se validan también fuera del formulario* · *El total y el contador de la modificación los calcula la aplicación…* |
+| El nuevo check-in va de mañana al día 180; las fechas de otra reserva propia y de otro usuario están bloqueadas (calendario y lógica) | *Días que se pueden elegir como nuevo check-in* · *Las fechas de otra reserva mía…* · *Las fechas reservadas por otro usuario…* |
+| Al modificar se liberan las fechas anteriores (otro usuario las reserva) y se ocupan las nuevas | *Al modificar, las fechas anteriores se liberan y las nuevas quedan ocupadas* |
+| Una sola modificación por reserva; al menos 2 días de anticipación; el límite de reservas activas no impide modificar | *Una reserva solo se puede modificar una vez* · *Anticipación mínima para modificar* · *Con el límite de reservas activas alcanzado…* |
+| Cancelar pide confirmación (foco en "No, volver"), muestra la confirmación, deja la reserva "Cancelada" sin acciones y resta 1 al resumen (lvargas, dchoque, admin) | *Cancelar una reserva* · *Ver Mis reservas, modificar una reserva a 14 noches y cancelarla* |
+| "No, volver" y Escape mantienen la reserva; un doble clic cancela una sola vez; se puede cancelar el día anterior al check-in | *Desistir de la cancelación…* · *Un doble clic en "Sí, cancelar"…* · *Se puede cancelar una reserva el día anterior al check-in* |
+| No se puede cancelar ni modificar una reserva cancelada, finalizada, no presentada o en curso, tampoco fuera de Mis reservas | *Una reserva cancelada no se puede volver a cancelar ni modificar* · *No se puede cancelar ni modificar una reserva … fuera de Mis reservas* |
+| Cancelar libera las fechas para otros huéspedes y el cupo del límite | *Cancelar una reserva libera sus fechas…* · *…libera el cupo del límite de reservas activas* |
+| El rol admin no ve ni puede cancelar o modificar reservas de otros usuarios | *El rol administrador no da acceso a las reservas de otros usuarios* |
+| Modificar y cancelar no altera los datos de los demás usuarios ni sus reservas | *Modificar y cancelar mis reservas no altera los datos de los demás usuarios* |
+| La modificación y la cancelación persisten al recargar y al volver a ingresar | *La modificación y la cancelación se mantienen…* |
+| Desde dos pestañas no se cancela dos veces ni se modifica una reserva ya modificada o cancelada | *No se puede cancelar dos veces…* · *Desde otra pestaña no se puede modificar…* |
