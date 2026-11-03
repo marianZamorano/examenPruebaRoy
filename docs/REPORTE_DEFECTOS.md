@@ -8,9 +8,10 @@
 | **Entorno** | Windows 11 · Google Chrome 156 · WebdriverIO 10 · Cucumber · Allure |
 | **Datos de prueba** | Usuarios de prueba publicados en la pantalla de login |
 
-Todos los defectos se detectaron **ejecutando la suite automatizada**. Cada uno tiene un escenario
-Cucumber con el tag `@bug` en [`features/01_login.feature`](../features/01_login.feature), que falla
-en el paso que demuestra el defecto.
+Todos los defectos se detectaron **al ejecutar los escenarios diseñados** en
+[`features/01_login.feature`](../features/01_login.feature), que describen el comportamiento esperado
+del login. El escenario que detectó cada defecto se etiquetó con `@bug` y `@issue=<ID>`, y falla en el
+paso donde la aplicación no cumple lo esperado.
 
 ## Cómo reproducir y generar la evidencia
 

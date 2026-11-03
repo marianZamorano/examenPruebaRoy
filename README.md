@@ -31,24 +31,30 @@ npm install
 
 ```bash
 npm run clean        # 1. Borra los resultados de la ejecución anterior
-npm test             # 2. Ejecuta las pruebas de regresión
-npm run test:bugs    # 3. Ejecuta las pruebas que reproducen defectos (opcional)
-npm run report       # 4. Genera y abre el reporte de Allure
+npm test             # 2. Ejecuta todas las pruebas (incluye los defectos)
+npm run report       # 3. Genera y abre el reporte de Allure
 ```
+
+Con eso, el reporte de Allure muestra en una sola ejecución lo que funciona (en verde) y los
+defectos encontrados (en rojo, con su ID, severidad, capturas, video y diagnóstico).
 
 ### Qué hace cada comando
 
 | Comando | Qué hace | Resultado esperado |
 |---|---|---|
 | `npm run clean` | Borra `allure-results/`, `allure-report/` y `videos/`. **No** borra el historial (`allure-history/`) ni la evidencia (`docs/evidencias/`) | — |
-| `npm test` | Ejecuta todos los escenarios **excepto** los `@bug` | Todo en verde |
-| `npm run test:bugs` | Ejecuta **solo** los escenarios `@bug`, que reproducen defectos encontrados | Todos fallan a propósito, cada uno en el paso que demuestra el defecto |
+| `npm test` | Ejecuta **todos** los escenarios, incluidos los `@bug` | Los escenarios de regresión pasan y los `@bug` fallan, cada uno en el paso que demuestra el defecto |
+| `npm run test:regresion` | Ejecuta todo **excepto** los `@bug`: solo lo que debe funcionar | Todo en verde |
+| `npm run test:bugs` | Ejecuta **solo** los escenarios `@bug` | Todos fallan mientras el defecto exista |
 | `npm run test:evidencias` | Igual que `test:bugs`, pero con DevTools abierto. Regenera `docs/evidencias/` | Igual que `test:bugs` |
 | `npm run report` | Genera el reporte de Allure con el historial de ejecuciones y lo abre en el navegador (se cierra con `Ctrl+C`) | — |
 
+`npm test` termina con error (en rojo) mientras existan defectos: refleja el estado real de la
+aplicación. Para saber si algo **nuevo** se rompió, se usa `npm run test:regresion`, que debe estar
+siempre en verde.
+
 `npm run clean` es importante porque Allure **acumula** resultados: sin limpiar, el reporte mezcla
-ejecuciones viejas con nuevas. Se pueden ejecutar varios comandos de prueba seguidos (por ejemplo
-`npm test` y `npm run test:bugs`) y el reporte los muestra juntos.
+ejecuciones viejas con nuevas.
 
 ### Qué se registra automáticamente
 
@@ -150,15 +156,32 @@ aplicación, cada uno con un escenario distinto:
 | `ptorrez` | Usuario bloqueado |
 | `admin` | Corporativo, rol admin |
 
-### Escenarios automatizados
+### Diseño de las pruebas
+
+Los escenarios se diseñaron a partir de lo que el login **debería** hacer, organizados por
+funcionalidad. Cada uno describe el comportamiento esperado, no un defecto:
 
 | Grupo | Qué se prueba |
 |---|---|
-| **Positivos** (`@smoke`) | Login de los 5 usuarios activos, verificando la URL, el nombre en la cabecera y el mensaje de bienvenida. Login con la tecla Enter. El usuario no distingue mayúsculas y se recortan sus espacios |
-| **Negativos** (`@negative`) | Usuario bloqueado. Credenciales inválidas: contraseña incorrecta, mayúsculas en la contraseña, usuario inexistente, correo en lugar de usuario, contraseña de otro usuario, usuario bloqueado con clave incorrecta, inyección SQL. Contraseña con espacio al final. Campos vacíos o con solo espacios. Entradas de 5000 caracteres |
-| **Seguridad y sesión** (`@security`) | Contraseña enmascarada, intento de XSS, rutas protegidas sin sesión, ruta inexistente, la sesión sobrevive a una recarga, un usuario con sesión no vuelve a ver el login, "atrás" después del login, el logout elimina la sesión del almacenamiento |
-| **Caché** (`@cache`) | La app no usa Service Workers, Cache Storage ni cookies, y el documento no se guarda en la caché HTTP |
-| **Defectos** (`@bug`) | 11 escenarios que reproducen los defectos encontrados (ver abajo) |
+| **Inicio de sesión exitoso** (`@smoke`) | Login de los 5 usuarios activos, verificando la URL, el nombre en la cabecera y el mensaje de bienvenida. Login con la tecla Enter. El usuario no distingue mayúsculas y se recortan sus espacios |
+| **Validación de credenciales** (`@negative`) | Usuario bloqueado. Credenciales inválidas: contraseña incorrecta, mayúsculas en la contraseña, usuario inexistente, correo en lugar de usuario, contraseña de otro usuario, usuario bloqueado con clave incorrecta, inyección SQL. Contraseña con espacio al final. Campos vacíos o con solo espacios. Entradas de 5000 caracteres |
+| **Seguridad del formulario y de las credenciales** (`@security`) | Contraseña enmascarada, intento de XSS, protección ante intentos fallidos, las contraseñas no se guardan legibles en el navegador |
+| **Control de acceso** | Rutas protegidas sin sesión, ruta inexistente, volver a la página solicitada después del login |
+| **Manejo de la sesión** | La sesión sobrevive a una recarga, un usuario con sesión no vuelve a ver el login, "atrás" después del login, el logout elimina la sesión y no deja datos visibles (ni con "atrás" ni en otras pestañas), un usuario bloqueado pierde el acceso, la sesión no se puede suplantar y tiene expiración |
+| **Caché del navegador** (`@cache`) | La app no usa Service Workers, Cache Storage ni cookies, y el documento no se guarda en la caché HTTP |
+| **Usabilidad y accesibilidad** | El mensaje de error desaparece al corregir, las acciones destructivas piden confirmación, los errores se marcan de forma accesible |
+
+### Ciclo de un defecto
+
+Los defectos **no se conocían de antemano**: aparecieron al ejecutar las pruebas diseñadas. El ciclo
+que se siguió con cada uno:
+
+1. **Diseño:** se escribe el escenario con el comportamiento esperado. Por ejemplo, *"Cerrar sesión en una pestaña cierra la sesión en las demás"*.
+2. **Ejecución:** si la aplicación lo cumple, el escenario pasa y queda como prueba de regresión.
+3. **Análisis del fallo:** si falla, se investiga si el error está en la prueba o en la aplicación, con las capturas, el video y el diagnóstico que registra Allure.
+4. **Reporte:** si el error es de la aplicación, se documenta el defecto en [`docs/REPORTE_DEFECTOS.md`](docs/REPORTE_DEFECTOS.md) con su severidad, prioridad y evidencia.
+5. **Etiquetado:** el escenario recibe los tags `@bug`, `@issue=<ID>` y `@severity=<nivel>`. La prueba no cambia: los tags solo indican que ese fallo ya está reportado y lo enlazan con su ficha.
+6. **Corrección:** cuando el defecto se corrige, el escenario pasa a verde (siempre verificó el comportamiento correcto), se quitan los tags y sigue vigilando que el defecto no vuelva.
 
 ### Decisiones técnicas
 
@@ -171,8 +194,9 @@ aplicación, cada uno con un escenario distinto:
 
 ### Defectos encontrados
 
-Se encontraron **3 bugs de severidad alta** y **8 defectos de diseño**, documentados con severidad,
-prioridad, pasos y evidencia en [`docs/REPORTE_DEFECTOS.md`](docs/REPORTE_DEFECTOS.md):
+Al ejecutar las pruebas, 11 escenarios no se cumplieron: **3 bugs de severidad alta** y **8 defectos
+de diseño**, documentados con severidad, prioridad, pasos y evidencia en
+[`docs/REPORTE_DEFECTOS.md`](docs/REPORTE_DEFECTOS.md):
 
 | ID | Defecto | Severidad |
 |---|---|---|
@@ -188,10 +212,9 @@ prioridad, pasos y evidencia en [`docs/REPORTE_DEFECTOS.md`](docs/REPORTE_DEFECT
 | DEF-008 | Después del login no se vuelve a la página solicitada | Baja |
 | DEF-010 | Errores del formulario sin marcado accesible | Baja |
 
-Cada escenario `@bug` tiene los tags `@issue=<ID>` y `@severity=<nivel>`, que Allure muestra en el
-reporte. Se excluyen de `npm test` para que la regresión en verde signifique "todo lo que debe
-funcionar, funciona", y un fallo signifique "algo nuevo se rompió". Cuando un defecto se corrija,
-se quita su tag `@bug` y el escenario pasa a formar parte de la regresión.
+`npm test` ejecuta todos los escenarios, así que cada ejecución verifica si los defectos siguen
+existiendo y los documenta en Allure. `npm run test:regresion` excluye los `@bug`: su resultado en
+verde significa "todo lo que debe funcionar, funciona", y un fallo significa "algo nuevo se rompió".
 
 ## Inciso 2: Reserva de 6 noches
 
