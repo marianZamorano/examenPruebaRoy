@@ -1,6 +1,6 @@
 # examenPruebaRoy
 
-Resolución de la prueba diagnóstica de automatización E2E sobre [Hotel QA](https://hotel-qa-f51.pages.dev/).
+Resolución del examen de automatización sobre [Hotel QA](https://hotel-qa-f51.pages.dev/).
 
 ## Stack
 
@@ -33,9 +33,25 @@ npm run report    # genera y abre el reporte de Allure
 
 ```
 features/
-├── *.feature            # escenarios en Gherkin (uno por inciso)
-├── pageobjects/         # Page Objects (POM)
-└── step-definitions/    # implementación de los pasos
+├── 01_login.feature                        # inciso 1
+├── 02_reserva_6_noches.feature             # inciso 2
+├── 03_registro_y_reserva_2_noches.feature  # inciso 3
+├── 04_mis_reservas.feature                 # inciso 4
+├── pageobjects/                            # Page Objects (POM)
+│   ├── page.js                             # clase base
+│   ├── login.page.js                       # /login
+│   ├── register.page.js                    # /registro
+│   ├── rooms.page.js                       # /habitaciones
+│   ├── roomDetail.page.js                  # /habitaciones/:codigo
+│   ├── myBookings.page.js                  # /mis-reservas
+│   └── components/
+│       └── bookingModal.js                 # modal de reserva
+└── step-definitions/                       # implementación de los pasos
+    ├── hooks.js                            # limpia localStorage antes de cada escenario
+    ├── login.steps.js
+    ├── register.steps.js
+    ├── booking.steps.js
+    └── myBookings.steps.js
 ```
 
 ## Incisos
