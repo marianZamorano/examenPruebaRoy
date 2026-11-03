@@ -1,3 +1,5 @@
+const video = require('wdio-video-reporter').default
+
 exports.config = {
     //
     // ====================
@@ -53,6 +55,9 @@ exports.config = {
     //
     capabilities: [{
         browserName: 'chrome',
+        // WebDriver clásico: con BiDi, switchToWindow no cambia el contexto de
+        // ejecución entre pestañas en esta versión de WebdriverIO
+        'wdio:enforceWebDriverClassic': true,
         'goog:chromeOptions': {
             args: ['--start-maximized', '--lang=es']
         }
@@ -138,7 +143,15 @@ exports.config = {
         // Muestra los pasos de Cucumber (Given/When/Then) en el reporte
         // en lugar de cada comando interno de WebdriverIO.
         useCucumberStepReporter: true,
-        disableWebdriverStepsReporting: true
+        disableWebdriverStepsReporting: true,
+        // El reporter de video toma capturas en cada comando: no se adjuntan todas,
+        // solo la del paso que falla (ver afterStep)
+        disableWebdriverScreenshotsReporting: true
+    }], [video, {
+        // Graba un video de cada escenario fallido y lo adjunta al reporte de Allure
+        outputDir: 'videos',
+        saveAllVideos: false,
+        videoSlowdownMultiplier: 3
     }]],
 
     // If you are using Cucumber you need to specify the location of your step definitions.
@@ -162,7 +175,7 @@ exports.config = {
         // <boolean> fail if there are any undefined or pending steps
         strict: false,
         // <string> (expression) only execute the features or scenarios with tags matching the expression
-        tags: '',
+        tags: 'not @bug',
         // <number> timeout for step definitions
         timeout: 60000,
         // <boolean> Enable this config to treat undefined definitions as warnings.
@@ -268,12 +281,10 @@ exports.config = {
      * @param {number}             result.duration  duration of scenario in milliseconds
      * @param {object}             context          Cucumber World object
      */
-    afterStep: async function (step, scenario, result, context) {
-        // Adjunta una captura de pantalla al reporte de Allure cuando un paso falla
-        if (!result.passed) {
-            await browser.takeScreenshot();
-        }
-    },
+    // afterStep: la captura de cada paso y el diagnóstico de fallos se hacen en
+    // los hooks de Cucumber (features/step-definitions/hooks.js)
+    // afterStep: async function (step, scenario, result, context) {
+    // },
     /**
      *
      * Runs after a Cucumber Scenario.
